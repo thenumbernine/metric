@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>Metric Visualization - WebGL</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+		<meta name="apple-mobile-web-app-capable" content="yes"/>
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+
+		<script type='text/javascript' src='/js/jquery-1.11.0.min.js'></script>
+		<script type="text/javascript" src="/js/purl.js"></script>
+		<script type='text/javascript' src='/js/util.js'></script>
+		<script type='text/javascript' src='/js/gl-matrix.2.2.0.min.js'></script>
+		<script type='text/javascript' src='/js/gl-util.js'></script>
+		<script type='text/javascript' src='/js/mouse3d.js'></script>
+		<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+		<script type='text/javascript' src='main.js'></script>
+		
+<script type='text/javascript'>
+var _gaq = _gaq || [];
+_gaq.push(['_setAccount', 'UA-17312646-1']);
+_gaq.push(['_trackPageview']);
+(function() {
+	var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+	ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+	var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+})();
+</script>
+
+	</head>
+	<body style='margin:0px; overflow:hidden; background-color:black; color:white'>
+		<div id='menu' style='position:absolute'>
+			<img id='panelButton' src='menu.png' style='padding:5px'/>
+			<button id='infoButton' style='background-color:black; color:white; width:24px; height:24px; border:1px solid white; cursor:pointer; display:table-cell; align:center; vertical-align:top; margin:5px'>?</button><br>
+		</div>
+		
+		<div id='panel' style='overflow:scroll; z-index:1; position:absolute; top:32px; display:none'>
+			<br>
+			Tools:<br>
+			<button id='tools_rotate'>rotate</button><br>
+			<button id='tools_select'>select</button><br>
+			<br>
+			<div style='color:rgb(0,255,255)'>selected point on surface</div>
+			<div style='color:rgb(255,0,0)'>derivative along first coordinate</div>
+			<div style='color:rgb(0,255,0)'>derivative along second coordinate</div>
+			<br>
+			Coordinate system:<br>
+			<input type='radio' name='coordinates' id='coord_Polar'>Polar:</input><br>
+			\( \left[ \matrix{ x \\ y } \right] = \left[ \matrix{ r cos(\phi) \\ r sin(\phi) } \right] \)<br>
+			for varying \( r \), \( \phi \)<br>
+			<br>		
+			<input type='radio' name='coordinates' id='coord_Spherical'>Spherical:</input><br>
+			\( \left[ \matrix{ x \\ y \\ z } \right] = \left[ \matrix{ r sin(\theta) cos(\phi) \\ r sin(\theta) sin(\phi) \\ r cos(\theta) } \right] \)<br>
+			for fixed \( r \) and varying \( \theta \), \( \phi \)<br>
+			<br>
+		</div>
+			
+		<div id='info' style='display:none; overflow:scroll; top:32px; z-index:1; position:absolute; background-color:rgba(255,255,255,.85); color:black; padding:10px'>
+			coordinate system \( x_i \)<br>
+			vector basis: \( \textbf{e}_j = {e_j}^{\hat k}\)<br>
+			one-form basis: \( \boldsymbol{\omega}^i = {\omega^i}_{\hat k} \)<br>
+			for indexes \(i\) in the coordinates and indexes \({\hat k}\) in the embedded space<br>
+			orthogonality \( \langle {\textbf e}_j, \boldsymbol{\omega}^i \rangle = \delta^i_j \)<br>
+			<br>
+			commultation coefficients: \( [\textbf{e}_i, \textbf{e}_j] = \nabla_{\textbf{e}_i} \textbf{e}_j - \nabla_{\textbf{e}_j} \textbf{e}_i = {c_{ij}}^k \textbf{e}_k \)<br>
+			antisymmetry: \( [ \textbf{e}_i, \textbf{e}_j ] = -[ \textbf{e}_j, \textbf{e}_i ] \) implies \( {c_{ij}}^k = -{c_{ji}}^k \)<br>
+			<br>
+			A basis is <i>holonomic</i> when all \( {c_{ij}}^k = 0 \).<br>
+			This coincides with when \( \textbf{e}_i = {\partial \over {\partial x^i}} \) such that \( [\textbf{e}_i, \textbf{e}_j] = \left [ {\partial \over {\partial x^i}}, {\partial \over {\partial x^j}} \right ] = 0 \).  Subsequently \( \boldsymbol{\omega}^i = dx^i \).<br>
+			A basis that does not meet this condition is considered <i>anholonomic</i>.<br> 
+			<br>
+			contravariant representation \( {\textbf v} = v^i {\textbf e}_i \)<br>
+			covariant representation \( \textbf{w} = w_i \boldsymbol{\omega}^i \)<br>
+			<br>	
+			metric: \( g_{ij} = {\textbf e}_i \cdot {\textbf e}_j \)<br>
+			metric inverse: \( ||g^{ij}|| = \) inverse of \( ||g_{ij}|| \) such that \( g^{ik} g_{kj} = \delta^i_j \)<br>
+			metric symmetry: \( g_{ij} = \textbf{e}_i \cdot \textbf{e}_j = \textbf{e}_j \cdot \textbf{e}_i = g_{ji} \)<br>
+			metric inverse symmetry implied from metric symmetry.<br>
+			identity derivative: \( 0 = \partial_k \delta^i_j = \partial_k (g^{il} g_{lj}) = \partial_k g^{il} g_{lj} + g^{il} \partial_k g_{lj} \)<br>
+			<br>
+			connection coefficient of the 1st kind: \( \Gamma_{ijk} \) <br>
+			in a holonmic basis: \( \Gamma_{ijk} = {1 \over 2} (\partial_k g_{ij} + \partial_j g_{ik} - \partial_i g_{jk}) \)<br>
+			in an anholonomic basis: \( \Gamma_{ijk} = {1 \over 2} (\partial_k g_{ij} + \partial_j g_{ik} - \partial_i g_{jk} + c_{ijk} + c_{ikj} - c_{jki}) \)<br>
+			1st kind symmetry: \( \Gamma_{i[jk]} = {1 \over 2} (\Gamma_{ijk} - \Gamma_{ikj}) = {1 \over 4} (\partial_k g_{ij} + \partial_j g_{ik} - \partial_i g_{jk} + c_{ijk} + c_{ikj} - c_{jki} - \partial_j g_{ik} - \partial_k g_{ij} + \partial_i g_{kj} - c_{ikj} - c_{ijk} + c_{kji}) = {1 \over 4} ( c_{jki} - c_{kji} ) = {1 \over 2} c_{kji} \)<br>
+			1st kind antisymmetry: \( \Gamma_{(ij)k} = {1 \over 2} (\Gamma_{ijk} + \Gamma_{jik}) = {1 \over 4} (\partial_k g_{ij} + \partial_j g_{ik} - \partial_i g_{jk} + c_{ijk} + c_{ikj} - c_{jki} + \partial_k g_{ji} + \partial_i g_{jk} - \partial_j g_{ik} + c_{jik} + c_{jki} - c_{ikj}) = {1 \over 4} (2 \partial_k g_{ij} + c_{ijk} + c_{jik}) = {1 \over 2} \partial_k g_{ij} \)<br>
+			<br>
+			connection coefficient of the 2nd kind: \( {\Gamma^i}_{jk} = g^{il} \Gamma_{ljk} \)<br>
+			covariant derivative of scalar: \( \nabla_i \phi = \partial_i \phi \)<br>
+			covariant derivative of vector: \( \nabla_i v^j = \partial_i v^j + {\Gamma^j}_{ki} v^k \)<br>
+			covariant derivative of one-form: \( \nabla_i w_j = \partial_i w_j - {\Gamma^k}_{ji} w_k \)<br>
+			<br>
+			covariant derivative of vector: \( \nabla_k v = \nabla_k (v^i {\textbf e}_i) = \nabla_k v^i {\textbf e}_i + v^i \nabla_k {\textbf e}_i = \partial_k v^i {\textbf e}_i + v^i {\Gamma^j}_{ik} {\textbf e}_j = (\partial_k v^i + v^j {\Gamma^i}_{jk}) {\textbf e}_i = {\textbf e}_i (\delta^i_j \partial_k + {\Gamma^i}_{jk}) v^j \)<br>
+			covariant derivative of vector basis: \( \nabla_k {\textbf e}_j = {\Gamma^i}_{jk} {\textbf e}_i \), or \( \langle \nabla_k {\textbf e}_j, \boldsymbol{\omega}^i \rangle = {\Gamma^i}_{jk} \)<br>
+			covariant derivative of one-form: \( \nabla_k w = \nabla_k (w_i \boldsymbol{\omega}^i) = \nabla_k w_i \boldsymbol{\omega}^i + w_i \nabla_k \boldsymbol{\omega}^i = \partial_k w_i \boldsymbol{\omega}^i - {\Gamma^i}_{jk} w_i \boldsymbol{\omega}^j = (\partial_k w_i - {\Gamma^j}_{ik} w_j) \boldsymbol{\omega}^i = \boldsymbol{\omega}^i (\delta^j_i \partial_k - {\Gamma^j}_{ik}) w_j \)<br>
+			covariant derivative of one-form basis: \( \nabla_k \boldsymbol{\omega}^i = -{\Gamma^i}_{jk} \boldsymbol{\omega}^j \), or \( -\langle \nabla_k \boldsymbol{\omega}^i, {\textbf e}_j \rangle = {\Gamma^i}_{jk} \)<br>
+			verification of identities: \( 0 = \nabla_k \delta^i_j = \nabla_k \langle \boldsymbol{\omega}^i, {\textbf e}_j \rangle = \langle \nabla_k \boldsymbol{\omega}^i, {\textbf e}_j \rangle + \langle \boldsymbol{\omega}^i, \nabla_k {\textbf e}_j \rangle = -{\Gamma^i}_{jk} + {\Gamma^i}_{jk} = 0 \)<br>
+			covariant derivative of metric: \( \nabla_k g_{ij} = \partial_k g_{ij} - {\Gamma^l}_{ik} g_{lj} - {\Gamma^l}_{jk} g_{il} = \partial_k g_{ij} - \Gamma_{jik} - \Gamma_{ijk} = \partial_k g_{ij} - \partial_k g_{ij} = 0 \)<br>
+			<br>
+			exterior derivative: \( \textbf{dv} \)<br>
+			exterior derivative of vector as a linear self-relation: \( \textbf{de}_i = \textbf{e}_k {\boldsymbol{\omega}^k}_i \)<br>
+			equating covariant and exterior derivative for vector basis: \( \textbf{de}_i = \nabla \textbf{e}_i = \textbf{e}_k {\Gamma^k}_{ij} \boldsymbol{\omega}^j = \textbf{e}_k {\boldsymbol{\omega}^k}_i \).  Therefore \( {\boldsymbol{\omega}^k}_i = {\Gamma^k}_{ij} \boldsymbol{\omega}^j \)<br>
+			exterior derivative expanded in a contravariant basis: \( \textbf{dv} = \textbf{d} (v^i \textbf{e}_i) = \textbf{d}v^i \textbf{e}_i + v^i \textbf{de}_i = (\textbf{d}v^k + v^i {\boldsymbol{\omega}^k}_i) \textbf{e}_k \)<br>
+			
+			exterior derivative of inner product: \( \textbf{d}(\textbf{u} \cdot \textbf{v}) = \textbf{du} \cdot \textbf{v} + \textbf{u} \cdot \textbf{dv} \)<br>
+			exterior derivative of vector basis: \( \textbf{d}g_{ij} = (\textbf{de}_i \cdot \textbf{e}_j) = \textbf{de}_i \cdot \textbf{e}_j + \textbf{e}_i \cdot \textbf{de}_j = \textbf{e}_k {\boldsymbol{\omega}^k}_i \cdot \textbf{e}_j + \textbf{e}_i \cdot \textbf{e}_k {\boldsymbol{\omega}^k}_j = g_{jk} {\boldsymbol{\omega}^k}_i + g_{ik} {\boldsymbol{\omega}^k}_j = \boldsymbol{\omega}_{ji} + \boldsymbol{\omega}_{ij} \)<br>
+			<br>
+			...in a holonomic basis, equating covariant and exterior derivatives: \( 0 = \nabla g_{ij} = \textbf{d}g_{ij} = \boldsymbol{\omega}_{ji} + \boldsymbol{\omega}_{ij} \) such that \( \boldsymbol{\omega}_{ij} = -\boldsymbol{\omega}_{ji} \)<br>
+			(but you cannot equate \( \nabla \) and \( \textbf{d} \) except for non-covariant tensors)<br>
+			<br>
+			Sources:<br>
+			Misner, Charles W.; Thorne, Kip S.; Wheeler, John Archibald (1970), Gravitation, New York: W.H. Freeman. ISBN 0-7167-0344-0<br>
+		</div>
+		
+		<div id='webglfail' style='display:none'>
+			Sorry, your browser does not support WebGL<br>
+			Try one of these other, better browsers:<br>
+			<a href='http://www.google.com/chrome'>Chrome</a><br>
+			<a href='http://www.mozilla.org/firefox'>Firefox</a><br>
+			<a href='http://www.apple.com/safari'>Safari</a><br>
+			<b>Opera Users:</b><br>
+			Enter "opera:config" in the address bar.<br>
+			In the "User Prefs" section set both "Enable Hardware Acceleration" and "Enable WebGL" to "1" and then click "Save".<br>
+			It is still buggy.<br>
+			<b>IE Users:</b><br>
+			Sorry guys, IE doesn't plan to support WebGL.<br>
+			Consider using a more <a href='http://www.w3schools.com/browsers/browsers_stats.asp'>standard compliant</a> browser.<br>
+		</div>
+	</body>
+</html>

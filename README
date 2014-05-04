@@ -1,0 +1,12 @@
+metric visualization
+
+currently uses spherical metric and displays basis along theta and phi
+
+soon to display additional information such as 
+	connection coefficients visually as changes in basis along coordinates in terms of basis vectors
+	integrating along derivatives vs integrating along geodesics
+	maybe something to do with riemann metric tensor and geodesic deviation
+	more fomulas
+	custom formulas - either by rewriting my CAS in javascript (or using a pre-existing one) 
+		... or send the formula to the server for lua to run it against my own lua CAS here: https://github.com/thenumbernine/symmath-lua
+		... or emulate that lua CAS in javascript using Emscripten
