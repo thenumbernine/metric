@@ -60,6 +60,15 @@ var coordCharts = {
 		conn^theta_phi_phi = -sin(theta) cos(theta)
 	*/
 	Spherical : {
+		constants : {r : 1},
+		parameters : ['theta', 'phi'],
+		equations : [
+			'r * sin(theta) * cos(phi)',
+			'r * sin(theta) * sin(phi)',
+			'r * cos(theta)'
+		],
+		initialCoord : [0.26623666555845704, 1.8215957403167709],
+		initialDirection : [0, 1],
 		mapping : function(coord) {
 			var theta = coord[0];
 			var phi = coord[1];
@@ -144,11 +153,14 @@ var coordCharts = {
 					],
 				],
 			][basisIndex][wrtIndex];	//one more reason why I hate javascript: array construction and dereferencing syntax
-		},
-		initialCoord : [0.26623666555845704, 1.8215957403167709],
-		initialDirection : [0, 1]
+		}
 	},
 	Polar : {
+		parameters : ['r', 'phi'],
+		equations : [
+			'r * cos(phi)',
+			'r * sin(phi)'
+		],
 		mapping : function(coord) {
 			var r = coord[0];
 			var phi = coord[1];
@@ -455,16 +467,35 @@ $(document).ready(function() {
 	$('#tools_direction').click(function() { inputState = 'direction'; });
 
 	currentCoordChart = coordCharts.Spherical;
-	$('#coord_Spherical').attr('checked', 'checked');
-	$('#coord_Polar').change(function() {
-		currentCoordChart = coordCharts.Polar;
-		reset();
-	});
-	$('#coord_Spherical').change(function() {
-		currentCoordChart = coordCharts.Spherical;
-		reset();
-	});
 	
+	$.each(coordCharts, function(name,coordChart) {
+		var option = $('<option>', {
+			text : name,
+			value : name
+		}).appendTo($('#coordinateSystem'));
+		if (coordChart[name] == currentCoordChart) option.attr('selected', 'selected');
+	});
+	$('#coordinateSystem').change(function() {
+		selectCoordChart($(this).val());
+	});
+	function selectCoordChart(name) {
+		currentCoordChart = coordCharts[name];
+		$('#equations').empty();
+		var coordlabels = ['x', 'y', 'z', 'w'];
+		if (currentCoordChart.equations !== undefined) {
+			$.each(currentCoordChart.equations, function(i,equation) {
+				$('<div>', {text:coordlabels[i]+' = '+equation}).appendTo($('#equations'));
+			});
+		}
+		$('<span>', {text:'for '}).appendTo($('#equations'));
+		if (currentCoordChart.constants !== undefined) {
+			$.each(currentCoordChart.constants, function(k,v) {
+				$('<span>', {text:k+'='+v}).appendTo($('#equations'));
+			});
+		}
+		reset();
+	}
+
 	var tmpQ = quat.create();	
 	mouse = new Mouse3D({
 		pressObj : canvas,
@@ -733,7 +764,7 @@ void main() {
 
 	gl.enable(gl.DEPTH_TEST);
 
-	reset();
+	selectCoordChart('Spherical');
 
 	$(window).resize(resize);
 	resize();
