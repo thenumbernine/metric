@@ -2,6 +2,7 @@ var canvas;
 var gl;
 var mouse;
 var sceneObj;
+var meshObj;
 
 function resize() {
 	canvas.width = window.innerWidth;
@@ -143,7 +144,9 @@ var coordCharts = {
 					],
 				],
 			][basisIndex][wrtIndex];	//one more reason why I hate javascript: array construction and dereferencing syntax
-		}
+		},
+		initialCoord : [0.26623666555845704, 1.8215957403167709],
+		initialDirection : [0, 1]
 	},
 	Polar : {
 		mapping : function(coord) {
@@ -168,10 +171,87 @@ var coordCharts = {
 			case 1: return [-Math.sin(phi), Math.cos(phi), 0];
 			case 2: return [0,0,1];
 			}
-		}
+		},
+		/*
+		metric: g_rr = 1, g_phi_phi = r^2
+		inverse: g^rr = 1 g^phi^phi = 1/r^2
+		partial: g_phi_phi,r = 2r
+		conn: conn_phi_phi_r = conn_phi_r_phi = 1/2 g_phi_phi,r = r 
+			conn_r_phi_phi = -r
+		2nd: conn^phi_phi_r = conn^phi_r_phi = 1/r
+			conn^r_phi_phi = -r
+		*/
+		connection : function(coord, k, j) {
+			var r = coord[0];
+			var phi = coord[1];
+			return [
+				[
+					[0, 0],
+					[0, 1/r]
+				],
+				[
+					[0, 1/r],
+					[-r, 0]
+				],
+			][k][j]
+		},
+		initialCoord : [1, 0],
+		initialDirection : [0, 1]
 	}
 };
 var currentCoordChart;
+
+var thetaMin = 0;
+var thetaMax = Math.PI;
+var thetaDiv = 60;
+var phiMin = -Math.PI;
+var phiMax = Math.PI;
+var phiDiv = 120;
+function reset() {
+	//generate metric geometry
+	var intCoordToCoord = function(intCoord) {
+		//intCoord
+		var itheta = intCoord[0];
+		var iphi = intCoord[1];
+		//converted to coordinate chart coordinates
+		var theta = (itheta / (thetaDiv-1)) * (thetaMax - thetaMin) + thetaMin;
+		var phi = (iphi / (phiDiv-1)) * (phiMax - phiMin) + phiMin;
+		return [theta, phi];
+	};
+	
+	var intDivs = [thetaDiv, phiDiv];
+	for (var itheta = 0; itheta < thetaDiv; ++itheta) {
+		for (var iphi = 0; iphi < phiDiv; ++iphi) {
+			var intCoord = [itheta, iphi];
+			var coord = intCoordToCoord(intCoord);
+			var mappedCoord = currentCoordChart.mapping(coord);
+			var normal = currentCoordChart.unitDiff(coord, 2);
+			for (var k = 0; k < 2; ++k) {
+				meshObj.attrs.intCoord.data[k + 2 * (iphi + phiDiv * itheta)] = intCoord[k];
+			}
+			for (var k = 0; k < 2; ++k) {
+				meshObj.attrs.coord.data[k + 2 * (iphi + phiDiv * itheta)] = coord[k];
+			}
+			for (var k = 0; k < 3; ++k) {
+				meshObj.attrs.vertex.data[k + 3 * (iphi + phiDiv * itheta)] = mappedCoord[k];
+			}
+			for (var k = 0; k < 3; ++k) {
+				meshObj.attrs.normal.data[k + 3 * (iphi + phiDiv * itheta)] = normal[k];
+			}
+		}
+	}
+	meshObj.attrs.intCoord.updateData();
+	meshObj.attrs.coord.updateData();
+	meshObj.attrs.vertex.updateData();
+	meshObj.attrs.normal.updateData();
+
+
+	
+	currentCoord = currentCoordChart.initialCoord.clone();
+	currentDirection = currentCoordChart.initialDirection.clone();
+	//TODO mesh regen as well since we will want varying resolutions ... or not?
+	selectCoord(currentCoord);
+}
 
 var selectionObj;
 var selectionRes = 20;
@@ -269,12 +349,6 @@ function chooseDirection(direction) {
 	geodesicPathObj.attrs.vertex.updateData();
 }
 
-var vertexArray = [];
-var intCoordArray = [];
-var coordArray = [];
-var normalArray = [];
-
-
 var findClickedCoord;
 (function(){
 	var tmp = vec3.create();
@@ -290,19 +364,19 @@ var findClickedCoord;
 		vec3.quatZAxis(tmp2, GL.view.angle);
 		var considered = 0;
 		var pt = vec3.create();
-		for (var i = 0; i < vertexArray.length/3; ++i) {
+		for (var i = 0; i < meshObj.attrs.vertex.data.length/3; ++i) {
 			var normal = [
-				normalArray[3*i+0],
-				normalArray[3*i+1],
-				normalArray[3*i+2]
+				meshObj.attrs.normal.data[3*i+0],
+				meshObj.attrs.normal.data[3*i+1],
+				meshObj.attrs.normal.data[3*i+2]
 			];
 			vec3.transformQuat(normal, normal, sceneObj.angle);
 			if (vec3.dot(normal, tmp2) < 0) continue;	//forward dot normal > 0 means the surface is back-facing
 			
 			var vertex = [
-				vertexArray[3*i+0],
-				vertexArray[3*i+1],
-				vertexArray[3*i+2]
+				meshObj.attrs.vertex.data[3*i+0],
+				meshObj.attrs.vertex.data[3*i+1],
+				meshObj.attrs.vertex.data[3*i+2]
 			];
 			vec3.transformQuat(pt, vertex, sceneObj.angle);
 
@@ -314,7 +388,6 @@ var findClickedCoord;
 			considered++;
 
 			//ray/point distance from view pos / mouse line
-			// to meshMapping[i].dst
 			vec3.sub(tmp, pt, GL.view.pos);
 			vec3.cross(tmp, tmp, mouseDir);
 			var dist = vec3.length(tmp);
@@ -322,9 +395,8 @@ var findClickedCoord;
 			if (bestDist === undefined || dist < bestDist) {
 				bestDist = dist;
 				bestCoord = [
-					coordArray[3*i+0],
-					coordArray[3*i+1],
-					coordArray[3*i+2]
+					meshObj.attrs.coord.data[2*i+0],
+					meshObj.attrs.coord.data[2*i+1]
 				];
 			}
 		}
@@ -384,6 +456,14 @@ $(document).ready(function() {
 
 	currentCoordChart = coordCharts.Spherical;
 	$('#coord_Spherical').attr('checked', 'checked');
+	$('#coord_Polar').change(function() {
+		currentCoordChart = coordCharts.Polar;
+		reset();
+	});
+	$('#coord_Spherical').change(function() {
+		currentCoordChart = coordCharts.Spherical;
+		reset();
+	});
 	
 	var tmpQ = quat.create();	
 	mouse = new Mouse3D({
@@ -435,45 +515,6 @@ $(document).ready(function() {
 		}
 	});
 
-	//generate metric geometry
-	var thetaMin = 0;
-	var thetaMax = Math.PI;
-	var thetaDiv = 60;
-	var phiMin = -Math.PI;
-	var phiMax = Math.PI;
-	var phiDiv = 120;
-	var lines = [];
-	var intCoordToCoord = function(intCoord) {
-		//intCoord
-		var itheta = intCoord[0];
-		var iphi = intCoord[1];
-		//converted to coordinate chart coordinates
-		var theta = (itheta / (thetaDiv-1)) * (thetaMax - thetaMin) + thetaMin;
-		var phi = (iphi / (phiDiv-1)) * (phiMax - phiMin) + phiMin;
-		return [theta, phi];
-	};
-	meshMapping = [];
-	var intDivs = [thetaDiv, phiDiv];
-	for (var itheta = 0; itheta < thetaDiv; ++itheta) {
-		for (var iphi = 0; iphi < phiDiv; ++iphi) {
-			var intCoord = [itheta, iphi];
-			var coord = intCoordToCoord(intCoord);
-			var mappedCoord = currentCoordChart.mapping(coord);
-			var normal = currentCoordChart.unitDiff(coord, 2);
-			for (var k = 0; k < 2; ++k) {
-				intCoordArray.push(intCoord[k]);
-			}
-			for (var k = 0; k < 3; ++k) {
-				coordArray.push(coord[k]);
-			}
-			for (var k = 0; k < 3; ++k) {
-				vertexArray.push(mappedCoord[k]);
-			}
-			for (var k = 0; k < 3; ++k) {
-				normalArray.push(normal[k]);
-			}
-		}
-	}
 	var offset = [ [0,0], [1,0], [1,1], [1,1], [0,1], [0,0] ];
 	var indexes = [];
 	for (var itheta = 0; itheta < thetaDiv-1; ++itheta) {
@@ -544,19 +585,30 @@ void main() {
 		static : false
 	});
 
-	var meshObj = new GL.SceneObject({
+	meshObj = new GL.SceneObject({
 		parent : sceneObj,
 		mode : gl.TRIANGLES,
 		attrs : {
 			vertex : new GL.ArrayBuffer({
-				data : new Float32Array(vertexArray)
+				count : thetaDiv * phiDiv,
+				usgae : gl.DYNAMIC_DRAW,
+				keep : true
+			}),
+			coord : new GL.ArrayBuffer({
+				dim : 2,
+				count : thetaDiv * phiDiv,
+				keep : true
 			}),
 			intCoord : new GL.ArrayBuffer({
 				dim : 2,
-				data : new Float32Array(intCoordArray)
+				count : thetaDiv * phiDiv,
+				usage : gl.DYNAMIC_DRAW,
+				keep : true
 			}),
 			normal : new GL.ArrayBuffer({
-				data : new Float32Array(normalArray)
+				count : thetaDiv * phiDiv,
+				usage : gl.DYNAMIC_DRAW,
+				keep : true
 			})
 		},
 		indexes : new GL.ElementArrayBuffer({
@@ -568,7 +620,7 @@ void main() {
 		shader : meshShader,
 		static : false
 	});
-
+	
 	selectionObj = new GL.SceneObject({
 		parent : sceneObj,
 		mode : gl.LINE_LOOP,
@@ -675,8 +727,7 @@ void main() {
 
 	gl.enable(gl.DEPTH_TEST);
 
-	selectCoord(currentCoord);
-	chooseDirection(currentDirection);
+	reset();
 
 	$(window).resize(resize);
 	resize();
