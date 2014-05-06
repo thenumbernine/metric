@@ -111,6 +111,7 @@ var coordCharts = {
 		},
 		// delta_k e_j = Gamma^i_jk e_i
 		// maybe I should add the extrinsic components ... 
+		//connection(coord, k,j)[i] == Gamma^i_jk
 		connection : function(coord, basisIndex, wrtIndex) {
 			var theta = coord[0];
 			var phi = coord[1];
@@ -176,7 +177,13 @@ var selectionObj;
 var selectionRes = 20;
 var basisObjs = [];
 //var connObjs = [];
+var partialPathObj;
+var geodesicPathObj;
+var pathLength = 200;
+var currentCoord = [0.26623666555845704, 1.8215957403167709];
+var currentDirection = [0, 1];
 function selectCoord(coord) {
+	currentCoord = coord.clone();
 	var basis0 = currentCoordChart.diff(coord, 0);
 	var basis1 = currentCoordChart.diff(coord, 1);
 	var basis = [basis0, basis1];
@@ -219,7 +226,111 @@ function selectCoord(coord) {
 		}
 		*/
 	}
+
+	chooseDirection(currentDirection);
 }
+
+function chooseDirection(direction) {
+	currentDirection = direction.clone();
+	var partialCoord = currentCoord.clone();
+	var partialDir = direction.clone();
+	var geoCoord = currentCoord.clone();
+	var geoDir = direction.clone();
+	var step = .025;
+	for (var i = 0; i < pathLength; ++i) {
+		partialCoord[0] += step * partialDir[0];
+		partialCoord[1] += step * partialDir[1];
+		var mapped = currentCoordChart.mapping(partialCoord);
+		var normal = currentCoordChart.unitDiff(partialCoord,2);
+		partialPathObj.attrs.vertex.data[3*i+0] = mapped[0] + .01 * normal[0];
+		partialPathObj.attrs.vertex.data[3*i+1] = mapped[1] + .01 * normal[1];
+		partialPathObj.attrs.vertex.data[3*i+2] = mapped[2] + .01 * normal[2];
+	}
+	partialPathObj.attrs.vertex.updateData();
+	for (var i = 0; i < pathLength; ++i) {
+		geoCoord[0] += step * geoDir[0];
+		geoCoord[1] += step * geoDir[1];
+		var geoAccel = [0,0];
+		for (var j = 0; j < 2; ++j) {
+			for (var k = 0; k < 2; ++k) {
+				for (var l = 0; l < 2; ++l) {
+					geoAccel[j] -= currentCoordChart.connection(geoCoord,k,l)[j] * geoDir[k] * geoDir[l];
+				}
+			}
+		}
+		geoDir[0] += step * geoAccel[0];
+		geoDir[1] += step * geoAccel[1];
+		var mapped = currentCoordChart.mapping(geoCoord);
+		var normal = currentCoordChart.unitDiff(geoCoord,2);
+		geodesicPathObj.attrs.vertex.data[3*i+0] = mapped[0] + .01 * normal[0];
+		geodesicPathObj.attrs.vertex.data[3*i+1] = mapped[1] + .01 * normal[1];
+		geodesicPathObj.attrs.vertex.data[3*i+2] = mapped[2] + .01 * normal[2];
+	}
+	geodesicPathObj.attrs.vertex.updateData();
+}
+
+var vertexArray = [];
+var intCoordArray = [];
+var coordArray = [];
+var normalArray = [];
+
+
+var findClickedCoord;
+(function(){
+	var tmp = vec3.create();
+	var tmp2 = vec3.create();
+	findClickedCoord = function() {
+		var mouseDir = vec3.create();
+		GL.mouseDir(mouseDir, mouse.xf, mouse.yf);
+		vec3.normalize(mouseDir, mouseDir);
+		//ray intersection test with coordinate chart ...
+		// for now just search for closest point in geometry?
+		var bestDist = undefined;
+		var bestCoord = undefined;
+		vec3.quatZAxis(tmp2, GL.view.angle);
+		var considered = 0;
+		var pt = vec3.create();
+		for (var i = 0; i < vertexArray.length/3; ++i) {
+			var normal = [
+				normalArray[3*i+0],
+				normalArray[3*i+1],
+				normalArray[3*i+2]
+			];
+			vec3.transformQuat(normal, normal, sceneObj.angle);
+			if (vec3.dot(normal, tmp2) < 0) continue;	//forward dot normal > 0 means the surface is back-facing
+			
+			var vertex = [
+				vertexArray[3*i+0],
+				vertexArray[3*i+1],
+				vertexArray[3*i+2]
+			];
+			vec3.transformQuat(pt, vertex, sceneObj.angle);
+
+			
+			//make sure we're on the right side of the view plane
+			vec3.sub(tmp, pt, GL.view.pos);
+			if (vec3.dot(tmp, tmp2) > 0) continue;	//fwd dot delta > 0 means we're good, so -fwd dot delta < 0 means we're good, so -fwd dot delta > 0 means we're bad
+		
+			considered++;
+
+			//ray/point distance from view pos / mouse line
+			// to meshMapping[i].dst
+			vec3.sub(tmp, pt, GL.view.pos);
+			vec3.cross(tmp, tmp, mouseDir);
+			var dist = vec3.length(tmp);
+			
+			if (bestDist === undefined || dist < bestDist) {
+				bestDist = dist;
+				bestCoord = [
+					coordArray[3*i+0],
+					coordArray[3*i+1],
+					coordArray[3*i+2]
+				];
+			}
+		}
+		return bestCoord;
+	}
+})();
 
 $(document).ready(function() {
 	$('#panelButton').click(function() {
@@ -265,85 +376,56 @@ $(document).ready(function() {
 		$('#panel').hide();
 	}
 
-	$('#tools_rotate').click(function() { dragging = true; });
-	$('#tools_select').click(function() { dragging = false; });
+	window.inputState = 'rotate';
+
+	$('#tools_rotate').click(function() { inputState = 'rotate'; });
+	$('#tools_select').click(function() { inputState = 'select'; });
+	$('#tools_direction').click(function() { inputState = 'direction'; });
 
 	currentCoordChart = coordCharts.Spherical;
 	$('#coord_Spherical').attr('checked', 'checked');
 	
-	var vertexArray = [];
-	var intCoordArray = [];
-	var coordArray = [];
-	var normalArray = [];
-
-	window.dragging = true;	//GUI-ize me plz
-	var tmp = vec3.create();
-	var tmp2 = vec3.create();
 	var tmpQ = quat.create();	
 	mouse = new Mouse3D({
 		pressObj : canvas,
 		move : function(dx,dy) {
-			if (!dragging) {
-				var mouseDir = vec3.create();
-				GL.mouseDir(mouseDir, mouse.xf, mouse.yf);
-				vec3.normalize(mouseDir, mouseDir);
-				//ray intersection test with coordinate chart ...
-				// for now just search for closest point in geometry?
-				var bestDist = undefined;
-				var bestCoord = undefined;
-				vec3.quatZAxis(tmp2, GL.view.angle);
-				var considered = 0;
-				var pt = vec3.create();
-				for (var i = 0; i < vertexArray.length/3; ++i) {
-					var normal = [
-						normalArray[3*i+0],
-						normalArray[3*i+1],
-						normalArray[3*i+2]
-					];
-					vec3.transformQuat(normal, normal, sceneObj.angle);
-					if (vec3.dot(normal, tmp2) < 0) continue;	//forward dot normal > 0 means the surface is back-facing
-					
-					var vertex = [
-						vertexArray[3*i+0],
-						vertexArray[3*i+1],
-						vertexArray[3*i+2]
-					];
-					vec3.transformQuat(pt, vertex, sceneObj.angle);
-
-					
-					//make sure we're on the right side of the view plane
-					vec3.sub(tmp, pt, GL.view.pos);
-					if (vec3.dot(tmp, tmp2) > 0) continue;	//fwd dot delta > 0 means we're good, so -fwd dot delta < 0 means we're good, so -fwd dot delta > 0 means we're bad
-				
-					considered++;
-
-					//ray/point distance from view pos / mouse line
-					// to meshMapping[i].dst
-					vec3.sub(tmp, pt, GL.view.pos);
-					vec3.cross(tmp, tmp, mouseDir);
-					var dist = vec3.length(tmp);
-					
-					if (bestDist === undefined || dist < bestDist) {
-						bestDist = dist;
-						bestCoord = [
-							coordArray[3*i+0],
-							coordArray[3*i+1],
-							coordArray[3*i+2]
-						];
-					}
-				}
-				
-				if (bestDist !== undefined) {
+			if (inputState == 'select') {
+				var bestCoord = findClickedCoord();
+			
+				if (bestCoord !== undefined) {
 					selectCoord(bestCoord);
 				}
 			}
 			
-			if (dragging) {
+			if (inputState == 'rotate') {
 				var rotAngle = Math.PI / 180 * .03 * Math.sqrt(dx*dx + dy*dy);
 				quat.setAxisAngle(tmpQ, [dy, dx, 0], rotAngle);
 
 				quat.mul(sceneObj.angle, tmpQ, sceneObj.angle);
 				quat.normalize(sceneObj.angle, sceneObj.angle);
+			}
+
+			if (inputState == 'direction') {
+				//re-integrate geodesic and uncorrected coordinates along surface
+				var clickedCoord = findClickedCoord();
+				if (clickedCoord !== undefined) {
+					var mappedClickedCoord = currentCoordChart.mapping(clickedCoord);
+					var mappedCurrentCoord = currentCoordChart.mapping(currentCoord);
+					var delta = [
+						mappedClickedCoord[0] - mappedCurrentCoord[0],
+						mappedClickedCoord[1] - mappedCurrentCoord[1],
+						mappedClickedCoord[2] - mappedCurrentCoord[2]
+					];
+					var invAngle = quat.create();
+					quat.conjugate(invAngle, GL.view.angle);
+					vec3.transformQuat(delta, delta, invAngle);
+					var basis0 = currentCoordChart.unitDiff(currentCoord, 0);
+					var basis1 = currentCoordChart.unitDiff(currentCoord, 1);
+					var d0 = vec3.dot(basis0, delta);
+					var d1 = vec3.dot(basis1, delta);
+					var dl = vec2.length([d0, d1]); 
+					chooseDirection([d0/dl, d1/dl]);
+				}
 			}
 		},
 		zoom : function(dz) {
@@ -558,11 +640,43 @@ void main() {
 		*/
 	}
 
-	
+	partialPathObj = new GL.SceneObject({
+		parent : sceneObj,
+		mode : gl.LINE_STRIP,
+		attrs : {
+			vertex : new GL.ArrayBuffer({
+				count : pathLength,
+				usage : gl.DYNAMIC_DRAW,
+				keep : true
+			})
+		},
+		uniforms : {
+			color : [1,1,0,1]
+		},
+		shader : plainShader,
+		static : false
+	});
+	geodesicPathObj = new GL.SceneObject({
+		parent : sceneObj,
+		mode : gl.LINE_STRIP,
+		attrs : {
+			vertex : new GL.ArrayBuffer({
+				count : pathLength,
+				usage : gl.DYNAMIC_DRAW,
+				keep : true
+			})
+		},
+		uniforms : {
+			color : [1,0,1,1]
+		},
+		shader : plainShader,
+		static : false
+	});
 
 	gl.enable(gl.DEPTH_TEST);
 
-	selectCoord([1,0,0]);
+	selectCoord(currentCoord);
+	chooseDirection(currentDirection);
 
 	$(window).resize(resize);
 	resize();

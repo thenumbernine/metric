@@ -39,10 +39,13 @@ _gaq.push(['_trackPageview']);
 			Tools:<br>
 			<button id='tools_rotate'>rotate</button><br>
 			<button id='tools_select'>select</button><br>
+			<button id='tools_direction'>direction</button><br>
 			<br>
-			<div style='color:rgb(0,255,255)'>selected point on surface</div>
+			<div style='color:rgb(255,255,255)'>selected point on surface</div>
 			<div style='color:rgb(255,0,0)'>derivative along first coordinate</div>
 			<div style='color:rgb(0,255,0)'>derivative along second coordinate</div>
+			<div style='color:rgb(255,255,0)'>path along partial derivative</div>
+			<div style='color:rgb(255,0,255)'>path along covariant derivative</div>
 			<br>
 			Coordinate system:<br>
 			<div style='display:none'>
@@ -121,7 +124,7 @@ _gaq.push(['_trackPageview']);
 				= (\nabla_j v^i \textbf{e}_i + v^i \nabla_j \textbf{e}_i) \boldsymbol{\omega}^j
 				= (\partial_j v^k + v^i {\Gamma^k}_{ji}) \textbf{e}_k \boldsymbol{\omega}^j
 			\) <br>
-			covariant derivative of vector in index form: \( \nabla_i v^j = \partial_i v^j + {\Gamma^j}_{ki} v^k \)<br>
+			covariant derivative of vector in index notation: \( \nabla_i v^j = \partial_i v^j + {\Gamma^j}_{ki} v^k \)<br>
 			<br>
 			covariant derivative of one-form:
 			\( \nabla \textbf{w} 
@@ -130,20 +133,37 @@ _gaq.push(['_trackPageview']);
 				= (\nabla_j w_i \boldsymbol{\omega}^i + w_i \nabla_j \boldsymbol{\omega}^i) \boldsymbol{\omega}^j
 				= (\partial_j w_k - {\Gamma^k}_{ji} w_i ) \boldsymbol{\omega}^k \boldsymbol{\omega}^j 
 			\)<br>
-			covariant derivative of one-form in index form: \( \nabla_i w_j = \partial_i w_j - {\Gamma^k}_{ji} w_k \)<br>
+			covariant derivative of one-form in index notation: \( \nabla_i w_j = \partial_i w_j - {\Gamma^k}_{ji} w_k \)<br>
 			<br>
-			This is where we see that in index notation \( \nabla_k \) treats \( v^i \) as a vector, while in object notation \( \nabla_k \) treats \( v^i \) as a scalars of the \( \textbf{e}_i \) vector.<br>
+			This is where we see that in index notation \( \nabla_k \) treats \( v^i \) as a vector due to its raised index, while in object notation \( \nabla_k \) treats \( v^i \) as a scalars of the \( \textbf{e}_i \) vector.<br>
 			<br>
-			covariant derivative of metric: \( \nabla_k g_{ij} = \partial_k g_{ij} - {\Gamma^l}_{ik} g_{lj} - {\Gamma^l}_{jk} g_{il} = \partial_k g_{ij} - \Gamma_{jik} - \Gamma_{ijk} = \partial_k g_{ij} - \partial_k g_{ij} = 0 \)<br>
+			covariant derivative of metric in index notation: \( \nabla_k g_{ij} = \partial_k g_{ij} - {\Gamma^l}_{ik} g_{lj} - {\Gamma^l}_{jk} g_{il} = \partial_k g_{ij} - \Gamma_{jik} - \Gamma_{ijk} = \partial_k g_{ij} - \partial_k g_{ij} = 0 \)<br>
 			<br>
 			covariant vector derivative: 
 			\( \nabla_{\textbf{u}} \textbf{v} 
 				= \textbf{u} \cdot \nabla \textbf{v}
 				= u^i \textbf{e}_i \cdot \nabla_j v^k \textbf{e}_k \boldsymbol{\omega}^j
 				= u^i \textbf{e}_i \cdot (\partial_j v^k + v^l {\Gamma^k}_{jl}) \textbf{e}_k \boldsymbol{\omega}^j
+				= u^i (\partial_j v^k + v^l {\Gamma^k}_{jl}) \textbf{e}_i \cdot \textbf{e}_k \boldsymbol{\omega}^j
+				= u^i (\partial_j v^k + v^l {\Gamma^k}_{jl}) g_{ik} \boldsymbol{\omega}^j
+				= u_k (\partial_j v^k + v^i {\Gamma^k}_{ji}) \boldsymbol{\omega}^j
 			\)<br>
 			<br>
-			Riemann curvature: \( \nabla_k \nabla_l v^i - \nabla_l \nabla_k v^i = \nabla_k (\partial_l v^i + {\Gamma^i}_{jl} v^j) - \nabla_l (\partial_k v^i + {\Gamma^i}_{jk} v^j) = \nabla_k \partial_l v^i + \nabla_k {\Gamma^i}_{jl} v^j + {\Gamma^i}_{jl} \nabla_k v^j - \nabla_l \partial_k v^i - \nabla_l {\Gamma^i}_{jk} v^j - {\Gamma^i}_{jk} \nabla_l v^j\)<br>
+			Riemann curvature in index notation as difference of covariant derivatives in linear relation to the operated vector:<br>
+			\( 2 \nabla_{[k} \nabla_{l]} v^i \)<br>
+			\(= \nabla_k \nabla_l v^i - \nabla_l \nabla_k v^i\)<br>
+			\(= \nabla_k (\partial_l v^i 
+				+ {\Gamma^i}_{jl} v^j) 
+				- \nabla_l (\partial_k v^i 
+				+ {\Gamma^i}_{jk} v^j)
+			\)<br>
+			\(= \nabla_k \partial_l v^i 
+				+ \nabla_k {\Gamma^i}_{jl} v^j 
+				+ {\Gamma^i}_{jl} \nabla_k v^j 
+				- \nabla_l \partial_k v^i 
+				- \nabla_l {\Gamma^i}_{jk} v^j 
+				- {\Gamma^i}_{jk} \nabla_l v^j
+			\)<br>
 			\(= \partial_k \partial_l v^i 
 				- {\Gamma^m}_{lk} \partial_m v^i 
 				+ {\Gamma^i}_{mk} \partial_l v^m 
@@ -155,7 +175,8 @@ _gaq.push(['_trackPageview']);
 				- {\Gamma^i}_{ml} \partial_k v^m 
 				- \nabla_l {\Gamma^i}_{jk} v^j 
 				- {\Gamma^i}_{jk} \partial_l v^j 
-				- {\Gamma^i}_{jk} {\Gamma^j}_{ml} v^m \)<br>
+				- {\Gamma^i}_{jk} {\Gamma^j}_{ml} v^m
+			\)<br>
 			\( = 
 				\partial_k \partial_l v^i - \partial_l \partial_k v^i
 				- {\Gamma^m}_{lk} \partial_m v^i 
@@ -171,11 +192,12 @@ _gaq.push(['_trackPageview']);
 			\( 	= (\nabla_k {\Gamma^i}_{jl} - \nabla_l {\Gamma^i}_{jk}
 					+ {\Gamma^i}_{ml} {\Gamma^m}_{jk}
 					- {\Gamma^i}_{mk} {\Gamma^m}_{jl}) v^j
-				= {R^i}_{jkl} v^j \)<br>
-			...such that \( {R^i}_{jkl} = \nabla_k {\Gamma^i}_{jl} - \nabla_l {\Gamma^i}_{jk} + {\Gamma^i}_{mk} {\Gamma^m}_{jl} - {\Gamma^i}_{ml} {\Gamma^m}_{jk} \)<br>
+			\)<br>
+			let \( {R^i}_{jkl} = \nabla_k {\Gamma^i}_{jl} - \nabla_l {\Gamma^i}_{jk} + {\Gamma^i}_{mk} {\Gamma^m}_{jl} - {\Gamma^i}_{ml} {\Gamma^m}_{jk} \)<br>
+			so \( 2 \nabla_{[k} \nabla_{l]} v^i = {R^i}_{jkl} v^j \)<br>
 			<br>
 			exterior derivative: \( \textbf{d} \)<br>
-			exterior derivaive of scalar: \( \textbf{d}\phi = \partial_i \phi dx^i \). in a holonomic basis: \( \textbf{d}\phi = \partial_i \phi \omega^i \) <br>
+			exterior derivaive of scalar: \( \textbf{d}\phi = \partial_i \phi dx^i = \partial_i \phi \omega^i \) <br>
 			exterior derivative of wedge product of p-form \(\textbf{a}\) and q-form \(\textbf{b}\): \( \textbf{d} ( \textbf{a} \wedge \textbf{b} ) = \textbf{da} \wedge \textbf{b} + (-1)^p \textbf{a} \wedge \textbf{db} \)<br>
 			exterior derivative of vector as a linear relation to vector basis: \( \textbf{de}_i = \textbf{e}_k {\boldsymbol{\omega}^k}_i \)<br>
 			equating covariant and exterior derivative for vector basis: \( \textbf{de}_i = \nabla \textbf{e}_i = \textbf{e}_k {\Gamma^k}_{ij} \boldsymbol{\omega}^j = \textbf{e}_k {\boldsymbol{\omega}^k}_i \).<br>
@@ -184,12 +206,38 @@ _gaq.push(['_trackPageview']);
 			exterior derivative of inner product: \( \textbf{d}(\textbf{u} \cdot \textbf{v}) = \textbf{du} \cdot \textbf{v} + \textbf{u} \cdot \textbf{dv} \)<br>
 			exterior derivative of vector basis: \( \textbf{d}g_{ij} = (\textbf{de}_i \cdot \textbf{e}_j) = \textbf{de}_i \cdot \textbf{e}_j + \textbf{e}_i \cdot \textbf{de}_j = \textbf{e}_k {\boldsymbol{\omega}^k}_i \cdot \textbf{e}_j + \textbf{e}_i \cdot \textbf{e}_k {\boldsymbol{\omega}^k}_j = g_{jk} {\boldsymbol{\omega}^k}_i + g_{ik} {\boldsymbol{\omega}^k}_j = \boldsymbol{\omega}_{ji} + \boldsymbol{\omega}_{ij} \)<br>
 			<br>
-			...in a holonomic basis, equating covariant and exterior derivatives: \( 0 = \nabla g_{ij} = \textbf{d}g_{ij} = \boldsymbol{\omega}_{ji} + \boldsymbol{\omega}_{ij} \) such that \( \boldsymbol{\omega}_{ij} = -\boldsymbol{\omega}_{ji} \)<br>
-			(but you cannot equate \( \nabla \) and \( \textbf{d} \) except for non-covariant tensors)<br>
+			second exterior derivative of vector: 
+			\( \textbf{d}^2 \textbf{v} 
+				= \textbf{d}^2 ( v^i \textbf{e}_i )
+				= \textbf{d} ( \textbf{d} v^i \textbf{e}_i + v^i \textbf{de}_i )
+				= \textbf{d} ( \textbf{d} v^i \textbf{e}_i + v^i \textbf{e}_j {\boldsymbol{\omega}^j}_i )
+				= \textbf{d}^2 v^i \textbf{e}_i 
+					+ \textbf{d} v^i \textbf{d} \textbf{e}_i 
+					+ \textbf{d} v^i \textbf{e}_j {\boldsymbol{\omega}^j}_i
+					+ v^i \textbf{de}_j {\boldsymbol{\omega}^j}_i
+					+ v^i \textbf{e}_j \textbf{d}{\boldsymbol{\omega}^j}_i
+				= \textbf{d}^2 v^i \textbf{e}_i
+					+ 2 \textbf{d} v^i \textbf{e}_j {\boldsymbol{\omega}^j}_i
+					+ v^i \textbf{e}_k {\boldsymbol{\omega}^k}_j {\boldsymbol{\omega}^j}_i
+					+ v^i \textbf{e}_j \textbf{d}{\boldsymbol{\omega}^j}_i
+			\)<br>
+			...zero exterior derivatives of one-forms... 
+			\( = v^i \textbf{e}_j {\boldsymbol{\omega}^j}_k {\boldsymbol{\omega}^k}_i
+				+ v^i \textbf{e}_j \textbf{d}{\boldsymbol{\omega}^j}_i \)<br>
+			let \( {\textbf{R}^i}_j = {\boldsymbol{\omega}^i}_k {\boldsymbol{\omega}^k}_j + \textbf{d}{\boldsymbol{\omega}^i}_j \)<br>
+			so \( \textbf{d}^2 \textbf{v} = \textbf{e}_i {\textbf{R}^i}_j v^j \)<br>
 			<br>
-			getting to:<br>
-			\( \textbf{d}\boldsymbol{\omega}^i + {\boldsymbol{\omega}^i}_j \wedge \boldsymbol{\omega}^j = 0 \)<br>
-			\( {\textbf{R}^i}_j = \textbf{d}{\boldsymbol{\omega}^i}_j + {\boldsymbol{\omega}^i}_k \wedge {\boldsymbol{\omega}^k}_k \)<br>
+			\( 0 = \textbf{d} P 
+				= \textbf{d} \textbf{e}_i \boldsymbol{\omega}^i
+				= \textbf{de}_i \boldsymbol{\omega}^i + \textbf{e}_i \textbf{d}\boldsymbol{\omega}^i 
+				= \textbf{e}_j {\boldsymbol{\omega}^j}_i \boldsymbol{\omega}^i + \textbf{e}_j \textbf{d} \boldsymbol{\omega}^j
+				= \textbf{e}_j ({\boldsymbol{\omega}^j}_i \boldsymbol{\omega}^i + \textbf{d} \boldsymbol{\omega}^j)
+			\)<br>
+			so \( {\boldsymbol{\omega}^j}_i \boldsymbol{\omega}^i + \textbf{d} \boldsymbol{\omega}^j = 0 \) and \( \textbf{d} \boldsymbol{\omega}^j = -{\boldsymbol{\omega}^j}_i \boldsymbol{\omega}^i \)<br> 
+			<br>
+			show \( \langle \textbf{d}^2 \textbf{u} \wedge \textbf{v} \rangle = .. {R^i}_{jkl} u^k v^l \)<br>
+			show \( {\textbf{R}^i}_i = {R^i}_{j|kl|} \boldsymbol{\omega}^k \wedge \boldsymbol{\omega}^l \) <br>
+			show \( \textbf{d}\boldsymbol{\omega}^i + {\boldsymbol{\omega}^i}_j \wedge \boldsymbol{\omega}^j = 0 \)<br>
 			<br>
 			Sources:<br>
 			Misner, Charles W.; Thorne, Kip S.; Wheeler, John Archibald (1970), Gravitation, New York: W.H. Freeman. ISBN 0-7167-0344-0<br>
