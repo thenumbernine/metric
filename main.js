@@ -29,70 +29,143 @@ function update() {
 
 mapping:
 	y_i(x_j)
-	coords = x_j
+	coord = x_j
 	returns y_i
 
 diff:
 	dy_i/dx_j
 	 dim = j
-	 coords = x_j
+	 coord = x_j
 	 return dy_i/dx_j
 
 unitDiff: diff, normalized algebraically to remove singularities
+
+
 */
+var r = 1;
 var coordCharts = {
+	/*
+	metric:
+		g_theta_theta = r^2
+		g_phi_phi = r^2 sin^2 theta
+	partials:
+		g_phi_phi,theta = 2 r^2 sin(theta) cos(theta)
+	connections:
+		conn_phi_phi_theta = 1/2 g_phi_phi,theta = r^2 sin(theta) cos(theta)
+		conn_phi_theta_phi = 1/2 g_phi_phi,theta = r^2 sin(theta) cos(theta)
+		conn_theta_phi_phi = -1/2 g_phi_phi,theta = -r^2 sin(theta) cos(theta)
+	2nd kind:
+		conn^phi_phi_theta = conn^phi_theta_phi = cos(theta)/sin(theta)
+		conn^theta_phi_phi = -sin(theta) cos(theta)
+	*/
 	Spherical : {
-		mapping : function(coords) {
-			var r = coords[0];
-			var theta = coords[1];
-			var phi = coords[2];
+		mapping : function(coord) {
+			var theta = coord[0];
+			var phi = coord[1];
 			var x = r * Math.sin(theta) * Math.cos(phi);
 			var y = r * Math.sin(theta) * Math.sin(phi);
 			var z = r * Math.cos(theta);
 			return [x, y, z];
 		},
-		diff : function(coords, dim) {
-			var r = coords[0];
-			var theta = coords[1];
-			var phi = coords[2];
+		diff : function(coord, dim) {
+			var theta = coord[0];
+			var phi = coord[1];
 			switch (dim) {
 			case 0:
-				return [
-					Math.sin(theta) * Math.cos(phi),
-					Math.sin(theta) * Math.sin(phi),
-					Math.cos(theta)];
-			case 1:
 				return [
 					r * Math.cos(theta) * Math.cos(phi),
 					r * Math.cos(theta) * Math.sin(phi),
 					-r * Math.sin(theta)];
-			case 2:
+			case 1:
 				return [
 					-r * Math.sin(theta) * Math.sin(phi),
 					r * Math.sin(theta) * Math.cos(phi),
 					0];
-			}
-		},
-		unitDiff : function(coords, dim) {
-			var r = coords[0];
-			var theta = coords[1];
-			var phi = coords[2];
-			switch (dim) {
-			case 0:
+			case 2:	//normal
 				return [
 					Math.sin(theta) * Math.cos(phi),
 					Math.sin(theta) * Math.sin(phi),
 					Math.cos(theta)];
-			case 1:
+			}
+		},
+		unitDiff : function(coord, dim) {
+			var theta = coord[0];
+			var phi = coord[1];
+			switch (dim) {
+			case 0:
 				return [
 					Math.cos(theta) * Math.cos(phi),
 					Math.cos(theta) * Math.sin(phi),
 					-Math.sin(theta)];
-			case 2:
+			case 1:
 				return [
 					-Math.sin(phi),
 					Math.cos(phi),
 					0];
+			case 2:
+				return [
+					Math.sin(theta) * Math.cos(phi),
+					Math.sin(theta) * Math.sin(phi),
+					Math.cos(theta)];
+			}
+		},
+		// delta_k e_j = Gamma^i_jk e_i
+		// maybe I should add the extrinsic components ... 
+		connection : function(coord, basisIndex, wrtIndex) {
+			var theta = coord[0];
+			var phi = coord[1];
+			return [
+				//deriv of e_theta
+				[
+					//wrt e_theta
+					[
+						0, //conn^theta_theta_theta,
+						0, //conn^phi_theta_theta
+					],
+					//wrt e_phi
+					[
+						0, //conn^theta_theta_phi
+						1/Math.tan(theta), //conn^phi_theta_phi
+					],
+				],
+				//deriv of e_phi
+				[
+					//wrt e_theta
+					[
+						0, //conn^theta_phi_theta
+						1/Math.tan(theta), //conn^phi_phi_theta
+					],
+					//wrt e_phi
+					[
+						-.5 * Math.sin(2 * theta), //conn^theta_phi_phi
+						0, //conn^phi_phi_phi
+					],
+				],
+			][basisIndex][wrtIndex];	//one more reason why I hate javascript: array construction and dereferencing syntax
+		}
+	},
+	Polar : {
+		mapping : function(coord) {
+			var r = coord[0];
+			var phi = coord[1];
+			return [r * Math.cos(phi), r * Math.sin(phi), 0];
+		},
+		diff : function(coord, dim) {
+			var r = coord[0];
+			var phi = coord[1];
+			switch (dim) {
+			case 0: return [Math.cos(phi), Math.sin(phi), 0];
+			case 1: return [-r * Math.sin(phi), r * Math.cos(phi), 0];
+			case 2: return [0,0,1];
+			}
+		},
+		unitDiff : function(coord, dim) {
+			var r = coord[0];
+			var phi = coord[1];
+			switch (dim) {
+			case 0: return [Math.cos(phi), Math.sin(phi), 0];
+			case 1: return [-Math.sin(phi), Math.cos(phi), 0];
+			case 2: return [0,0,1];
 			}
 		}
 	}
@@ -102,32 +175,50 @@ var currentCoordChart;
 var selectionObj;
 var selectionRes = 20;
 var basisObjs = [];
-function selectCoord(coords) {
-	var basis0 = currentCoordChart.unitDiff(coords, 1);
-	var basis1 = currentCoordChart.unitDiff(coords, 2);
+//var connObjs = [];
+function selectCoord(coord) {
+	var basis0 = currentCoordChart.diff(coord, 0);
+	var basis1 = currentCoordChart.diff(coord, 1);
 	var basis = [basis0, basis1];
-	var mappedCoords = currentCoordChart.mapping(coords);
+	
+	var unitBasis0 = currentCoordChart.unitDiff(coord, 0);
+	var unitBasis1 = currentCoordChart.unitDiff(coord, 1);
+	var unitBasis = [unitBasis0, unitBasis1];
+	
+	var mappedCoord = currentCoordChart.mapping(coord);
 
-	var radius = .1;
+	var selectionRadius = .1;
 	var modv = vec3.create();
 	for (var i = 0; i < selectionRes; ++i) {
 		var psi = i/selectionRes * Math.PI * 2;
-		vec3.scaleAndAdd(modv, mappedCoords, basis0, radius * Math.cos(psi));
-		vec3.scaleAndAdd(modv, modv, basis1, radius * Math.sin(psi));
+		vec3.scaleAndAdd(modv, mappedCoord, unitBasis0, selectionRadius * Math.cos(psi));
+		vec3.scaleAndAdd(modv, modv, unitBasis1, selectionRadius * Math.sin(psi));
 		for (var j = 0; j < 3; ++j) {
 			selectionObj.attrs.vertex.data[3 * i + j] = modv[j];
 		}
 	}
 	selectionObj.attrs.vertex.updateData();
 
-	$.each(basisObjs, function(i,basisObj) {
-		var e = basis[i];
-		for (var j = 0; j < 3; ++j) {
-			basisObj.attrs.vertex.data[j] = mappedCoords[j];
-			basisObj.attrs.vertex.data[3 + j] = mappedCoords[j] + .4 * e[j];
+	var basisLength = .4;
+	for (var i = 0; i < 2; ++i) {
+		var basisObj = basisObjs[i];
+		for (var k = 0; k < 3; ++k) {
+			basisObj.attrs.vertex.data[k] = mappedCoord[k];
+			basisObj.attrs.vertex.data[3 + k] = mappedCoord[k] + basisLength * basis[i][k];
 		}
 		basisObj.attrs.vertex.updateData();
-	});
+		/* need a better way to visualize this ...
+		for (var j = 0; j < 2; ++j) {
+			var conn = currentCoordChart.connection(coord, i, j);
+			var connObj = connObjs[i][j];
+			for (var k = 0; k < 3; ++k) {
+				connObj.attrs.vertex.data[k] = mappedCoord[k] + basisLength * basis[i][k];
+				connObj.attrs.vertex.data[3+k] = mappedCoord[k] + basisLength * (basis[i][k] + conn[0] * basis[0][k] + conn[1] * basis[1][k]);
+			}
+			connObj.attrs.vertex.updateData();
+		}
+		*/
+	}
 }
 
 $(document).ready(function() {
@@ -179,6 +270,11 @@ $(document).ready(function() {
 
 	currentCoordChart = coordCharts.Spherical;
 	$('#coord_Spherical').attr('checked', 'checked');
+	
+	var vertexArray = [];
+	var intCoordArray = [];
+	var coordArray = [];
+	var normalArray = [];
 
 	window.dragging = true;	//GUI-ize me plz
 	var tmp = vec3.create();
@@ -198,8 +294,22 @@ $(document).ready(function() {
 				vec3.quatZAxis(tmp2, GL.view.angle);
 				var considered = 0;
 				var pt = vec3.create();
-				for (var i = 0; i < meshMapping.length; ++i) {
-					vec3.transformQuat(pt, meshMapping[i].dst, sceneObj.angle);
+				for (var i = 0; i < vertexArray.length/3; ++i) {
+					var normal = [
+						normalArray[3*i+0],
+						normalArray[3*i+1],
+						normalArray[3*i+2]
+					];
+					vec3.transformQuat(normal, normal, sceneObj.angle);
+					if (vec3.dot(normal, tmp2) < 0) continue;	//forward dot normal > 0 means the surface is back-facing
+					
+					var vertex = [
+						vertexArray[3*i+0],
+						vertexArray[3*i+1],
+						vertexArray[3*i+2]
+					];
+					vec3.transformQuat(pt, vertex, sceneObj.angle);
+
 					
 					//make sure we're on the right side of the view plane
 					vec3.sub(tmp, pt, GL.view.pos);
@@ -215,7 +325,11 @@ $(document).ready(function() {
 					
 					if (bestDist === undefined || dist < bestDist) {
 						bestDist = dist;
-						bestCoord = meshMapping[i].src;
+						bestCoord = [
+							coordArray[3*i+0],
+							coordArray[3*i+1],
+							coordArray[3*i+2]
+						];
 					}
 				}
 				
@@ -240,75 +354,52 @@ $(document).ready(function() {
 	});
 
 	//generate metric geometry
-	var rMin = 1;
-	var rMax = 1;
-	var rDiv = 1;
 	var thetaMin = 0;
 	var thetaMax = Math.PI;
-	var thetaDiv = 6;
+	var thetaDiv = 60;
 	var phiMin = -Math.PI;
 	var phiMax = Math.PI;
-	var phiDiv = 12;
+	var phiDiv = 120;
 	var lines = [];
-	var intCoordsToCoords = function(intCoords) {
-		//intCoords
-		var ir = intCoords[0];
-		var itheta = intCoords[1];
-		var iphi = intCoords[2];
+	var intCoordToCoord = function(intCoord) {
+		//intCoord
+		var itheta = intCoord[0];
+		var iphi = intCoord[1];
 		//converted to coordinate chart coordinates
-		var r = (ir / rDiv) * (rMax - rMin) + rMin;
-		var theta = (itheta / thetaDiv) * (thetaMax - thetaMin) + thetaMin;
-		var phi = (iphi / phiDiv) * (phiMax - phiMin) + phiMin;
-		return [r, theta, phi];
+		var theta = (itheta / (thetaDiv-1)) * (thetaMax - thetaMin) + thetaMin;
+		var phi = (iphi / (phiDiv-1)) * (phiMax - phiMin) + phiMin;
+		return [theta, phi];
 	};
 	meshMapping = [];
-	vertexes = [];
-	var indexes = [];
-	//TODO line strip collections
-	var addLine = function(ia, ib) {
-		var res = 100;
-		for (var j = 0; j < res; ++j) { 
-			var f = j / res;
-			var nf = (j + 1) / res;
-			var iaf = vec3.create();
-			vec3.lerp(iaf, ia, ib, f);
-			var ibf = vec3.create();
-			vec3.lerp(ibf, ia, ib, nf);
-			var ca = intCoordsToCoords(iaf);
-			var cb = intCoordsToCoords(ibf);
-			var va = currentCoordChart.mapping(ca);
-			var vb = currentCoordChart.mapping(cb);
-			for (var i = 0; i < 3; ++i) {
-				vertexes.push(va[i]);
+	var intDivs = [thetaDiv, phiDiv];
+	for (var itheta = 0; itheta < thetaDiv; ++itheta) {
+		for (var iphi = 0; iphi < phiDiv; ++iphi) {
+			var intCoord = [itheta, iphi];
+			var coord = intCoordToCoord(intCoord);
+			var mappedCoord = currentCoordChart.mapping(coord);
+			var normal = currentCoordChart.unitDiff(coord, 2);
+			for (var k = 0; k < 2; ++k) {
+				intCoordArray.push(intCoord[k]);
 			}
-			meshMapping.push({
-				src : ca.clone(),
-				dst : va.clone()
-			});
-			indexes.push(vertexes.length/3-1);
-			for (var i = 0; i < 3; ++i) {
-				vertexes.push(vb[i]);
+			for (var k = 0; k < 3; ++k) {
+				coordArray.push(coord[k]);
 			}
-			indexes.push(vertexes.length/3-1);
-			meshMapping.push({
-				src : cb.clone(),
-				dst : vb.clone()
-			});
+			for (var k = 0; k < 3; ++k) {
+				vertexArray.push(mappedCoord[k]);
+			}
+			for (var k = 0; k < 3; ++k) {
+				normalArray.push(normal[k]);
+			}
 		}
-	};
-	var intDivs = [rDiv, thetaDiv, phiDiv];
-	for (ir = 0; ir < rDiv; ++ir) {
-		for (var itheta = 0; itheta < thetaDiv; ++itheta) {
-			for (var iphi = 0; iphi < phiDiv; ++iphi) {
-				var intCoords = [ir, itheta, iphi];
-				for (var i = 0; i < 3; ++i) {
-					if (!(i == 0 && intCoords[i] >= intDivs[i]-1)) {
-						var ia = [ir, itheta, iphi];
-						var ib = ia.clone();
-						++ib[i];
-						addLine(ia, ib);
-					}
-				}
+	}
+	var offset = [ [0,0], [1,0], [1,1], [1,1], [0,1], [0,0] ];
+	var indexes = [];
+	for (var itheta = 0; itheta < thetaDiv-1; ++itheta) {
+		for (var iphi = 0; iphi < phiDiv-1; ++iphi) {
+			for (var k = 0; k < offset.length; ++k) {
+				indexes.push(
+					iphi + offset[k][0] + (itheta + offset[k][1]) * phiDiv 
+				);
 			}
 		}
 	}
@@ -334,24 +425,65 @@ void main() {
 }
 */})
 	});
-
+	var meshShader = new GL.ShaderProgram({
+		vertexPrecision : 'best',
+		vertexCode : mlstr(function(){/*
+attribute vec3 vertex;
+attribute vec2 intCoord;
+attribute vec3 normal;
+uniform mat4 projMat;
+uniform mat4 mvMat;
+varying vec2 intCoordV;
+varying vec3 normalV;
+void main() {
+	normalV = (mvMat * vec4(normal, 0.)).xyz;
+	gl_Position = projMat * mvMat * vec4(vertex, 1.);
+	intCoordV = intCoord;
+}
+*/}),
+		fragmentPrecision : 'best',
+		fragmentCode : mlstr(function(){/*
+uniform vec4 color;
+varying vec2 intCoordV;
+varying vec3 normalV;
+void main() {
+	vec3 n = normalize(normalV);
+	if (n.z < 0.) n = -n;	//backface
+	vec2 fc = mod(intCoordV.xy / 10., 1.); 
+	float i = 1. - 8. * fc.x * fc.y * (1. - fc.x) * (1. - fc.y);
+	i = pow(i, 50.);
+	gl_FragColor = vec4(.25, .5, .5, 1.);
+	gl_FragColor.rgb *= 1. - i;
+	gl_FragColor.rgb *= n.z;
+}
+*/})
+	});
 	sceneObj = new GL.SceneObject({
 		static : false
 	});
 
 	var meshObj = new GL.SceneObject({
 		parent : sceneObj,
-		mode : gl.LINES,
+		mode : gl.TRIANGLES,
 		attrs : {
 			vertex : new GL.ArrayBuffer({
-				data : new Float32Array(vertexes)
+				data : new Float32Array(vertexArray)
+			}),
+			intCoord : new GL.ArrayBuffer({
+				dim : 2,
+				data : new Float32Array(intCoordArray)
+			}),
+			normal : new GL.ArrayBuffer({
+				data : new Float32Array(normalArray)
 			})
 		},
-		//indexes : indexes,
+		indexes : new GL.ElementArrayBuffer({
+			data : new Uint16Array(indexes)
+		}),
 		uniforms : {
 			color : [1,1,1,1]
 		},
-		shader : plainShader,
+		shader : meshShader,
 		static : false
 	});
 
@@ -366,7 +498,7 @@ void main() {
 			})
 		},
 		uniforms : {
-			color : [0,1,1,1]
+			color : [1,1,1,1]
 		},
 		shader : plainShader,
 		static : false
@@ -376,8 +508,18 @@ void main() {
 		[1,0,0,1],
 		[0,1,0,1]
 	];
+	var connColors = [
+		[
+			[1,1,0,1],
+			[0,1,1,1]
+		],
+		[
+			[1,0,1,1],
+			[1,.5,0,1]
+		]
+	];
 	for (var i = 0; i < 2; ++i) {
-		basisObjs.push(new GL.SceneObject({
+		basisObjs[i] = new GL.SceneObject({
 			parent : sceneObj,
 			mode : gl.LINES,
 			attrs : {
@@ -392,8 +534,33 @@ void main() {
 			},
 			shader : plainShader,
 			static : false
-		}));
+		});
+		/*
+		connObjs[i] = [];
+		for (var j = 0; j < 2; ++j) {
+			connObjs[i][j] = new GL.SceneObject({
+				parent : sceneObj,
+				mode : gl.LINES,
+				attrs : {
+					vertex : new GL.ArrayBuffer({
+						count : 2,
+						usage : gl.DYNAMIC_DRAW,
+						keep : true
+					})
+				},
+				uniforms : {
+					color : connColors[i][j]
+				},
+				shader : plainShader,
+				static : false
+			});
+		}
+		*/
 	}
+
+	
+
+	gl.enable(gl.DEPTH_TEST);
 
 	selectCoord([1,0,0]);
 
