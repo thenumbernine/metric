@@ -509,9 +509,7 @@ $(document).ready(function() {
 			}
 		},
 		zoom : function(dz) {
-			GL.view.fovY *= Math.exp(-.0003 * dz);
-			GL.view.fovY = Math.clamp(GL.view.fovY, 1, 179);
-			GL.updateProjection();
+			GL.view.pos[2] += .0001 * dz;
 		}
 	});
 
@@ -558,9 +556,12 @@ uniform mat4 projMat;
 uniform mat4 mvMat;
 varying vec2 intCoordV;
 varying vec3 normalV;
+varying vec3 vertexV;
 void main() {
 	normalV = (mvMat * vec4(normal, 0.)).xyz;
-	gl_Position = projMat * mvMat * vec4(vertex, 1.);
+	vec4 mvtx = mvMat * vec4(vertex, 1.);
+	vertexV = mvtx.xyz;
+	gl_Position = projMat * mvtx;
 	intCoordV = intCoord;
 }
 */}),
@@ -569,15 +570,20 @@ void main() {
 uniform vec4 color;
 varying vec2 intCoordV;
 varying vec3 normalV;
+varying vec3 vertexV;
 void main() {
 	vec3 n = normalize(normalV);
-	if (n.z < 0.) n = -n;	//backface
-	vec2 fc = mod(intCoordV.xy / 10., 1.); 
+	if (n.z < 0.) n = -n;	//backface lighting
+	
+	vec2 fc = mod(intCoordV.xy / 10., 1.); //grid
 	float i = 1. - 8. * fc.x * fc.y * (1. - fc.x) * (1. - fc.y);
 	i = pow(i, 50.);
+	
 	gl_FragColor = vec4(.25, .5, .5, 1.);
 	gl_FragColor.rgb *= 1. - i;
-	gl_FragColor.rgb *= n.z;
+	vec3 u = normalize(vertexV);
+	float l = dot(n, u);
+	gl_FragColor.rgb *= max(abs(l), .3);
 }
 */})
 	});
