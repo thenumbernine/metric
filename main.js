@@ -585,12 +585,14 @@ $(document).ready(function() {
 	});
 	function selectCoordChart(name) {
 		currentCoordChart = coordCharts[name];
-		var coordlabels = ['x', 'y', 'z', 'w'];
+		var coordlabels = ['x', 'y', 'z'];
+		$.each(coordlabels, function(i,x) { $('#equation'+x.toUpperCase()).text(''); });
 		if (currentCoordChart.equations !== undefined) {
 			$.each(currentCoordChart.equations, function(i,equation) {
-				$('#equation'+coordlabels[i].toUpperCase()).text(equation);
+				$('#equation'+coordlabels[i].toUpperCase()).text(coordlabels[i] + ' = ' + equation);
 			});
 		}
+		$('#constants').text('');
 		if (currentCoordChart.constants !== undefined) {
 			var constantText = [];
 			$.each(currentCoordChart.constants, function(k,v) {
@@ -627,8 +629,13 @@ $(document).ready(function() {
 				//re-integrate geodesic and uncorrected coordinates along surface
 				var clickedCoord = findClickedCoord();
 				if (clickedCoord !== undefined) {
-					var mappedClickedCoord = currentCoordChart.mapping(clickedCoord);
 					var mappedCurrentCoord = currentCoordChart.mapping(currentCoord);
+					//TODO
+					//rotate view ray and origin by inverse angle
+					//intersect view ray with plane of surface normal and mapped coordinate
+					
+					
+					var mappedClickedCoord = currentCoordChart.mapping(clickedCoord);
 					var delta = [
 						mappedClickedCoord[0] - mappedCurrentCoord[0],
 						mappedClickedCoord[1] - mappedCurrentCoord[1],
