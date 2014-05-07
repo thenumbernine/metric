@@ -43,7 +43,6 @@ unitDiff: diff, normalized algebraically to remove singularities
 
 
 */
-var r = 1;
 var coordCharts = {
 	/*
 	metric:
@@ -62,6 +61,8 @@ var coordCharts = {
 	Spherical : {
 		constants : {r : 1},
 		parameters : ['theta', 'phi'],
+		coordinateMin : [0, -Math.PI],
+		coordinateMax : [Math.PI, Math.PI],
 		equations : [
 			'r * sin(theta) * cos(phi)',
 			'r * sin(theta) * sin(phi)',
@@ -72,6 +73,7 @@ var coordCharts = {
 		mapping : function(coord) {
 			var theta = coord[0];
 			var phi = coord[1];
+			var r = this.constants.r;
 			var x = r * Math.sin(theta) * Math.cos(phi);
 			var y = r * Math.sin(theta) * Math.sin(phi);
 			var z = r * Math.cos(theta);
@@ -80,6 +82,7 @@ var coordCharts = {
 		diff : function(coord, dim) {
 			var theta = coord[0];
 			var phi = coord[1];
+			var r = this.constants.r;
 			switch (dim) {
 			case 0:
 				return [
@@ -101,6 +104,7 @@ var coordCharts = {
 		unitDiff : function(coord, dim) {
 			var theta = coord[0];
 			var phi = coord[1];
+			var r = this.constants.r;
 			switch (dim) {
 			case 0:
 				return [
@@ -122,9 +126,10 @@ var coordCharts = {
 		// delta_k e_j = Gamma^i_jk e_i
 		// maybe I should add the extrinsic components ... 
 		//connection(coord, k,j)[i] == Gamma^i_jk
-		connection : function(coord, basisIndex, wrtIndex) {
+		connection : function(coord, k, j) {
 			var theta = coord[0];
 			var phi = coord[1];
+			var r = this.constants.r;
 			return [
 				//deriv of e_theta
 				[
@@ -152,10 +157,14 @@ var coordCharts = {
 						0, //conn^phi_phi_phi
 					],
 				],
-			][basisIndex][wrtIndex];	//one more reason why I hate javascript: array construction and dereferencing syntax
+			][k][j];	//one more reason why I hate javascript: array construction and dereferencing syntax
 		}
 	},
 	Polar : {
+		initialCoord : [0.26623666555845704, 1.8215957403167709],
+		initialDirection : [0, 1],
+		coordinateMin : [0, -Math.PI],
+		coordinateMax : [2, Math.PI],
 		parameters : ['r', 'phi'],
 		equations : [
 			'r * cos(phi)',
@@ -209,29 +218,125 @@ var coordCharts = {
 		},
 		initialCoord : [1, 0],
 		initialDirection : [0, 1]
+	},
+	Torus : {
+		initialCoord : [0.26623666555845704, 1.8215957403167709],
+		initialDirection : [0, 1],
+		constants : {
+			r : .25,
+			R : 1
+		},
+		parameters : ['theta', 'phi'],
+		coordinateMin : [-Math.PI, -Math.PI],
+		coordinateMax : [Math.PI, Math.PI],
+		equations : [
+			'(r * sin(theta) + R) * cos(phi)',
+			'(r * sin(theta) + R) * sin(phi)',
+			'r *cos(theta)'
+		],
+		mapping : function(coord) {
+			var theta = coord[0];
+			var phi = coord[1];
+			var r = this.constants.r;
+			var R = this.constants.R;
+			return [
+				(r * Math.sin(theta) + R) * Math.cos(phi),
+				(r * Math.sin(theta) + R) * Math.sin(phi),
+				r * Math.cos(theta)
+			];
+		},
+		diff : function(coord, dim) {
+			var theta = coord[0];
+			var phi = coord[1];
+			var r = this.constants.r;
+			var R = this.constants.R;
+			switch (dim) {
+			case 0:	//partial_theta
+				return [
+					r * Math.cos(theta) * Math.cos(phi),
+					r * Math.cos(theta) * Math.sin(phi),
+					-r * Math.sin(theta)];
+			case 1: //partial_phi
+				return [
+					-(r * Math.sin(theta) + R) * Math.sin(phi),
+					(r * Math.sin(theta) + R) * Math.cos(phi),
+					0];
+			case 2:
+				return [
+					Math.sin(theta) * Math.cos(phi),
+					Math.sin(theta) * Math.sin(phi),
+					Math.cos(theta)];
+			}
+		},
+		unitDiff : function(coord, dim) {
+			var theta = coord[0];
+			var phi = coord[1];
+			var r = this.constants.r;
+			var R = this.constants.R;
+			switch (dim) {
+			case 0:	//partial_theta
+				return [
+					Math.cos(theta) * Math.cos(phi),
+					Math.cos(theta) * Math.sin(phi),
+					-Math.sin(theta)];
+			case 1: //partial_phi
+				return [
+					-Math.sin(phi),
+					Math.cos(phi),
+					0];
+			case 2:
+				return [
+					Math.sin(theta) * Math.cos(phi),
+					Math.sin(theta) * Math.sin(phi),
+					Math.cos(theta)];
+			}		
+		},
+		/*
+		g_theta_theta = r^2
+		g_phi_phi = (r sin(theta) + R)^2
+		g_phi_phi,theta = 2 r (r sin(theta) + R) cos(theta)
+		conn_phi_theta_phi = conn_phi_phi_theta = 1/2 g_phi_phi,theta = r (r sin(theta) + R) cos(theta)
+		conn_theta_phi_phi = -r (r sin(theta) + R) cos(theta)
+		conn^phi_theta_phi = conn^phi_phi_theta = r cos(theta) / (r sin(theta) + R)
+		conn^theta_phi_phi = -(r sin(theta) + R) cos(theta) / r
+		*/
+		connection : function(coord,k,j) {
+			var theta = coord[0];
+			var phi = coord[1];
+			var r = this.constants.r;
+			var R = this.constants.R;		
+			var a = r * Math.cos(theta) / (r * Math.sin(theta) + R);
+			var b = -(r * Math.sin(theta) + R) * Math.cos(theta) / r;
+			return [
+				[
+					[0, 0],
+					[0, a]
+				],
+				[
+					[0, a],
+					[b, 0]
+				]
+			][k][k];
+		}
 	}
 };
 var currentCoordChart;
 
-var thetaMin = 0;
-var thetaMax = Math.PI;
-var thetaDiv = 60;
-var phiMin = -Math.PI;
-var phiMax = Math.PI;
-var phiDiv = 120;
+var intDivs = [120,120];
 function reset() {
 	//generate metric geometry
 	var intCoordToCoord = function(intCoord) {
-		//intCoord
-		var itheta = intCoord[0];
-		var iphi = intCoord[1];
-		//converted to coordinate chart coordinates
-		var theta = (itheta / (thetaDiv-1)) * (thetaMax - thetaMin) + thetaMin;
-		var phi = (iphi / (phiDiv-1)) * (phiMax - phiMin) + phiMin;
-		return [theta, phi];
+		var coord = [];
+		var coordMin = currentCoordChart.coordinateMin;
+		var coordMax = currentCoordChart.coordinateMax;
+		for (var k = 0; k < intCoord.length; ++k) {
+			coord[k] = intCoord[k] / (intDivs[k]-1) * (coordMax[k] - coordMin[k]) + coordMin[k];
+		}
+		return coord;
 	};
-	
-	var intDivs = [thetaDiv, phiDiv];
+
+	var thetaDiv = intDivs[0];
+	var phiDiv = intDivs[1];
 	for (var itheta = 0; itheta < thetaDiv; ++itheta) {
 		for (var iphi = 0; iphi < phiDiv; ++iphi) {
 			var intCoord = [itheta, iphi];
@@ -480,18 +585,20 @@ $(document).ready(function() {
 	});
 	function selectCoordChart(name) {
 		currentCoordChart = coordCharts[name];
-		$('#equations').empty();
 		var coordlabels = ['x', 'y', 'z', 'w'];
 		if (currentCoordChart.equations !== undefined) {
 			$.each(currentCoordChart.equations, function(i,equation) {
-				$('<div>', {text:coordlabels[i]+' = '+equation}).appendTo($('#equations'));
+				$('#equation'+coordlabels[i].toUpperCase()).text(equation);
 			});
 		}
-		$('<span>', {text:'for '}).appendTo($('#equations'));
 		if (currentCoordChart.constants !== undefined) {
+			var constantText = [];
 			$.each(currentCoordChart.constants, function(k,v) {
-				$('<span>', {text:k+'='+v}).appendTo($('#equations'));
+				constantText.push(k+'='+v);
 			});
+			if (constantText.length > 0) {
+				$('#constants').text('for '+constantText.concat());
+			}
 		}
 		reset();
 	}
@@ -546,11 +653,11 @@ $(document).ready(function() {
 
 	var offset = [ [0,0], [1,0], [1,1], [1,1], [0,1], [0,0] ];
 	var indexes = [];
-	for (var itheta = 0; itheta < thetaDiv-1; ++itheta) {
-		for (var iphi = 0; iphi < phiDiv-1; ++iphi) {
+	for (var itheta = 0; itheta < intDivs[0]-1; ++itheta) {
+		for (var iphi = 0; iphi < intDivs[1]-1; ++iphi) {
 			for (var k = 0; k < offset.length; ++k) {
 				indexes.push(
-					iphi + offset[k][0] + (itheta + offset[k][1]) * phiDiv 
+					iphi + offset[k][0] + (itheta + offset[k][1]) * intDivs[1] 
 				);
 			}
 		}
@@ -627,23 +734,23 @@ void main() {
 		mode : gl.TRIANGLES,
 		attrs : {
 			vertex : new GL.ArrayBuffer({
-				count : thetaDiv * phiDiv,
+				count : intDivs[0] * intDivs[1],
 				usgae : gl.DYNAMIC_DRAW,
 				keep : true
 			}),
 			coord : new GL.ArrayBuffer({
 				dim : 2,
-				count : thetaDiv * phiDiv,
+				count : intDivs[0] * intDivs[1],
 				keep : true
 			}),
 			intCoord : new GL.ArrayBuffer({
 				dim : 2,
-				count : thetaDiv * phiDiv,
+				count : intDivs[0] * intDivs[1],
 				usage : gl.DYNAMIC_DRAW,
 				keep : true
 			}),
 			normal : new GL.ArrayBuffer({
-				count : thetaDiv * phiDiv,
+				count : intDivs[0] * intDivs[1],
 				usage : gl.DYNAMIC_DRAW,
 				keep : true
 			})
