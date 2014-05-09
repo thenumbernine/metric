@@ -318,6 +318,110 @@ var coordCharts = {
 				]
 			][k][k];
 		}
+	},
+	Paraboloid : {
+		initialCoord : [.25,.25],
+		initialDirection : [0,1],
+		coordinateMin : [1,1],
+		coordinateMax : [-1,-1],
+		parameters : ['u', 'v'],
+		equations : [
+			'u', 'v', '-u * u - v * v'
+		],
+		mapping : function(coord) {
+			var u = coord[0];
+			var v = coord[1];
+			return [u, v, -u * u - v * v];
+		},
+		diff : function(coord, dim) {
+			var u = coord[0];
+			var v = coord[1];
+			return [
+				[1,0,-2*u],
+				[0,1,-2*v],
+				[2*u,2*v,1]
+			][dim];
+		},
+		unitDiff : function(coord, dim) {
+			var diff = this.diff(coord, dim);
+			var len = vec3.length(diff);
+			return [
+				diff[0] / len,
+				diff[1] / len,
+				diff[2] / len
+			];
+		},
+		/*
+		metric: g_uu = 1 + 4 * u^2, g_vv = 1 + 4 * v^2
+		partial: g_uu,u = 8 * u, g_vv,v = 8 * v
+		conn: conn_uuu = 4 * u, conn_vvv = 4 * v
+		2nd: conn^u_uu = 4 * u / (1 + 4 * u^2), conn^v_vv = 4 * v / (1 + 4 * v^2)
+		*/
+		connection : function(coord, k, j) {
+			var u = coord[0];
+			var v = coord[1];
+			return [
+				[
+					[4 * u / (1 + 4 * u * u), 0],
+					[0,0],
+				],
+				[
+					[0,0],
+					[0,4 * v / (1 + 4 * v * v)]
+				]
+			][k][j];
+		}
+	},
+	'Hyperbolic Paraboloid' : {
+		initialCoord : [.25,.25],
+		initialDirection : [0,1],
+		parameters : ['u', 'v'],
+		coordinateMin : [-1,-1],
+		coordinateMax : [1,1],
+		equations : [ 'u', 'v', 'u * u - v * v' ],
+		mapping : function(coord) {
+			var u = coord[0];
+			var v = coord[1];
+			return [u, v, u * u - v * v];
+		},
+		diff : function(coord, dim) {
+			var u = coord[0];
+			var v = coord[1];
+			return [
+				[1,0,2*u],
+				[0,1,-2*v],
+				[-2*u,2*v,1]
+			][dim];
+		},
+		unitDiff : function(coord, dim) {
+			var diff = this.diff(coord, dim);
+			var len = vec3.length(diff);
+			return [
+				diff[0] / len,
+				diff[1] / len,
+				diff[2] / len
+			];
+		},
+		/*
+		metric: g_uu = 1 + 4 * u^2, g_vv = 1 + 4 * v^2
+		partial: g_uu,u = 8 * u, g_vv,v = 8 * v
+		conn: conn_uuu = 4 * u, conn_vvv = 4 * v
+		2nd: conn^u_uu = 4 * u / (1 + 4 * u^2), conn^v_vv = 4 * v / (1 + 4 * v^2)
+		*/
+		connection : function(coord, k, j) {
+			var u = coord[0];
+			var v = coord[1];
+			return [
+				[
+					[4 * u / (1 + 4 * u * u), 0],
+					[0,0],
+				],
+				[
+					[0,0],
+					[0,4 * v / (1 + 4 * v * v)]
+				]
+			][k][j];
+		}
 	}
 };
 var currentCoordChart;
@@ -361,8 +465,6 @@ function reset() {
 	meshObj.attrs.coord.updateData();
 	meshObj.attrs.vertex.updateData();
 	meshObj.attrs.normal.updateData();
-
-
 	
 	currentCoord = currentCoordChart.initialCoord.clone();
 	currentDirection = currentCoordChart.initialDirection.clone();
@@ -371,12 +473,12 @@ function reset() {
 }
 
 var selectionObj;
-var selectionRes = 20;
+var selectionRes = 100;
 var basisObjs = [];
 //var connObjs = [];
 var partialPathObj;
 var geodesicPathObj;
-var pathLength = 200;
+var pathLength = 5000;
 var currentCoord = [0.26623666555845704, 1.8215957403167709];
 var currentDirection = [0, 1];
 function selectCoord(coord) {
@@ -387,6 +489,7 @@ function selectCoord(coord) {
 	
 	var unitBasis0 = currentCoordChart.unitDiff(coord, 0);
 	var unitBasis1 = currentCoordChart.unitDiff(coord, 1);
+	var normal = currentCoordChart.unitDiff(coord,2);
 	var unitBasis = [unitBasis0, unitBasis1];
 	
 	var mappedCoord = currentCoordChart.mapping(coord);
@@ -408,7 +511,7 @@ function selectCoord(coord) {
 		var basisObj = basisObjs[i];
 		for (var k = 0; k < 3; ++k) {
 			basisObj.attrs.vertex.data[k] = mappedCoord[k];
-			basisObj.attrs.vertex.data[3 + k] = mappedCoord[k] + basisLength * basis[i][k];
+			basisObj.attrs.vertex.data[3 + k] = mappedCoord[k] + basisLength * basis[i][k] + .01 * normal[k];
 		}
 		basisObj.attrs.vertex.updateData();
 		/* need a better way to visualize this ...
@@ -433,7 +536,7 @@ function chooseDirection(direction) {
 	var partialDir = direction.clone();
 	var geoCoord = currentCoord.clone();
 	var geoDir = direction.clone();
-	var step = .025;
+	var step = .001;
 	for (var i = 0; i < pathLength; ++i) {
 		partialCoord[0] += step * partialDir[0];
 		partialCoord[1] += step * partialDir[1];

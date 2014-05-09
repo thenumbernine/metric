@@ -295,12 +295,33 @@ _gaq.push(['_trackPageview']);
 				= (\partial_i w_j - \partial_j w_i) \textbf{dx}^{|i} \wedge \textbf{dx}^{j|}
 			\)<br>
 			exterior derivative of wedge product of p-form \(\textbf{a}\) and q-form \(\textbf{b}\): \( \textbf{d} ( \textbf{a} \wedge \textbf{b} ) = \textbf{da} \wedge \textbf{b} + (-1)^p \textbf{a} \wedge \textbf{db} \)<br>
-			exterior derivative of vector as a linear relation to vector basis: \( \textbf{de}_i = \textbf{e}_k {\boldsymbol{\omega}^k}_i \)<br>
-			equating covariant and exterior derivative for vector basis: \( \textbf{de}_i = \boldsymbol{\nabla} \textbf{e}_i = \textbf{e}_k {\Gamma^k}_{ij} \boldsymbol{\omega}^j = \textbf{e}_k {\boldsymbol{\omega}^k}_i \).<br>
+			exterior derivative of vector as a linear relation to vector basis: \( \textbf{de}_i = \textbf{e}_k \otimes {\boldsymbol{\omega}^k}_i \)<br>
+			equating covariant and exterior derivative for vector basis: 
+			\( \textbf{de}_i 
+				= \boldsymbol{\nabla} \textbf{e}_i 
+				= {\Gamma^k}_{ij} \textbf{e}_k \otimes \boldsymbol{\omega}^j 
+				= \textbf{e}_k \otimes {\boldsymbol{\omega}^k}_i
+			\)<br>
 			so \( {\boldsymbol{\omega}^k}_i = {\Gamma^k}_{ij} \boldsymbol{\omega}^j \) and \( \nabla_i \boldsymbol{\omega}^k = -{\boldsymbol{\omega}^k}_i \)<br>
-			exterior derivative expanded in a contravariant basis: \( \textbf{dv} = \textbf{d} (v^i \textbf{e}_i) = \textbf{d}v^i \textbf{e}_i + v^i \textbf{de}_i = (\textbf{d}v^k + v^i {\boldsymbol{\omega}^k}_i) \textbf{e}_k = (\partial_j v^k + {\Gamma^k}_{ij} v^i) \boldsymbol{\omega}^j \textbf{e}_k \)<br>
-			exterior derivative of inner product: \( \textbf{d}(\textbf{u} \cdot \textbf{v}) = \textbf{du} \cdot \textbf{v} + \textbf{u} \cdot \textbf{dv} \)<br>
-			exterior derivative of vector basis: \( \textbf{d}g_{ij} = (\textbf{de}_i \cdot \textbf{e}_j) = \textbf{de}_i \cdot \textbf{e}_j + \textbf{e}_i \cdot \textbf{de}_j = \textbf{e}_k {\boldsymbol{\omega}^k}_i \cdot \textbf{e}_j + \textbf{e}_i \cdot \textbf{e}_k {\boldsymbol{\omega}^k}_j = g_{jk} {\boldsymbol{\omega}^k}_i + g_{ik} {\boldsymbol{\omega}^k}_j = \boldsymbol{\omega}_{ji} + \boldsymbol{\omega}_{ij} \)<br>
+			exterior derivative expanded in a contravariant basis: 
+			\( \textbf{dv} 
+				= \textbf{d} (v^i \textbf{e}_i) 
+				= \textbf{d}v^i \otimes \textbf{e}_i + v^i \textbf{de}_i 
+				= (\textbf{d}v^k + v^i {\boldsymbol{\omega}^k}_i) \otimes \textbf{e}_k 
+				= (\partial_j v^k + {\Gamma^k}_{ij} v^i) \boldsymbol{\omega}^j \otimes \textbf{e}_k
+			\)<br>
+			exterior derivative of inner product: 
+			\( \textbf{d}(\textbf{u} \cdot \textbf{v}) 
+				= \textbf{du} \cdot \textbf{v} + \textbf{u} \cdot \textbf{dv}
+			\)<br>
+			exterior derivative of vector basis: 
+			\( \textbf{d}g_{ij} 
+				= (\textbf{de}_i \cdot \textbf{e}_j) 
+				= \textbf{de}_i \cdot \textbf{e}_j + \textbf{e}_i \cdot \textbf{de}_j
+				= \textbf{e}_k {\boldsymbol{\omega}^k}_i \cdot \textbf{e}_j + \textbf{e}_i \cdot \textbf{e}_k {\boldsymbol{\omega}^k}_j
+				= g_{jk} {\boldsymbol{\omega}^k}_i + g_{ik} {\boldsymbol{\omega}^k}_j
+				= \boldsymbol{\omega}_{ji} + \boldsymbol{\omega}_{ij}
+			\)<br>
 			<br>
 			second exterior derivative of a one-form: \( \textbf{d}(\textbf{dw}) = 0 \) <br>
 			second exterior derivative of vector: 
@@ -309,12 +330,12 @@ _gaq.push(['_trackPageview']);
 				= \textbf{d} ( \textbf{d} v^i \textbf{e}_i + v^i \textbf{de}_i )
 				= \textbf{d} ( \textbf{d} v^i \textbf{e}_i + v^i \textbf{e}_j {\boldsymbol{\omega}^j}_i )
 				= \textbf{d}^2 v^i \textbf{e}_i 
-					+ \textbf{d} v^i \textbf{d} \textbf{e}_i 
-					+ \textbf{d} v^i \textbf{e}_j {\boldsymbol{\omega}^j}_i
-					+ v^i \textbf{de}_j {\boldsymbol{\omega}^j}_i
+					+ \textbf{d} v^i \wedge \textbf{d} \textbf{e}_i 
+					+ \textbf{d} v^i \wedge \textbf{e}_j {\boldsymbol{\omega}^j}_i
+					+ v^i \textbf{de}_j \wedge {\boldsymbol{\omega}^j}_i
 					+ v^i \textbf{e}_j \textbf{d}{\boldsymbol{\omega}^j}_i
 				= \textbf{d}^2 v^i \textbf{e}_i
-					+ 2 \textbf{d} v^i \textbf{e}_j {\boldsymbol{\omega}^j}_i
+					+ 2 \textbf{d} v^i \wedge \textbf{e}_j {\boldsymbol{\omega}^j}_i
 					+ v^i \textbf{e}_k {\boldsymbol{\omega}^k}_j \wedge {\boldsymbol{\omega}^j}_i
 					+ v^i \textbf{e}_j \textbf{d}{\boldsymbol{\omega}^j}_i
 			\)<br>
@@ -324,24 +345,26 @@ _gaq.push(['_trackPageview']);
 			let \( {\textbf{R}^i}_j = {\boldsymbol{\omega}^i}_k \wedge {\boldsymbol{\omega}^k}_j + \textbf{d}{\boldsymbol{\omega}^i}_j \)<br>
 			so \( \textbf{d}^2 \textbf{v} = \textbf{e}_i {\textbf{R}^i}_j v^j \)<br>
 			<br>
-			\( {\textbf{R}^i}_j 
-				= {\boldsymbol{\omega}^i}_k \wedge {\boldsymbol{\omega}^k}_j + \textbf{d}{\boldsymbol{\omega}^i}_j
-				= {\Gamma^i}_{kl} {\Gamma^k}_{jm} \boldsymbol{\omega}^l \wedge \boldsymbol{\omega}^m + \textbf{d} ( {\Gamma^i}_{jk} \boldsymbol{\omega}^k )
-			\)<br>
+			Riemann metric two-form:<br>
+			 \( {\textbf{R}^i}_j = {\boldsymbol{\omega}^i}_m \wedge {\boldsymbol{\omega}^m}_j + \textbf{d}{\boldsymbol{\omega}^i}_j \)<br>
+			\( = {\Gamma^i}_{mk} {\Gamma^m}_{jl} \boldsymbol{\omega}^k \wedge \boldsymbol{\omega}^l + \textbf{d} ( {\Gamma^i}_{jl} \boldsymbol{\omega}^l ) \)<br>
+			\( = {\Gamma^i}_{mk} {\Gamma^m}_{jl} \boldsymbol{\omega}^k \wedge \boldsymbol{\omega}^l + \textbf{d} {\Gamma^i}_{jl} \boldsymbol{\omega}^l + {\Gamma^i}_{jl} \textbf{d} \boldsymbol{\omega}^l \)<br>
+			\( = ( \partial_k {\Gamma^i}_{jl} + {\Gamma^i}_{mk} {\Gamma^m}_{jl} ) \boldsymbol{\omega}^k \wedge \boldsymbol{\omega}^l \)<br>
+			\( = ( \partial_k {\Gamma^i}_{jl} - \partial_l {\Gamma^i}_{jk} + {\Gamma^i}_{mk} {\Gamma^m}_{jl} - {\Gamma^i}_{ml} {\Gamma^m}_{jk} ) \boldsymbol{\omega}^{|k} \wedge \boldsymbol{\omega}^{l|} \)<br>
+			\( = {R^i}_{jkl}\boldsymbol{\omega}^{|k} \wedge \boldsymbol{\omega}^{l|} \)<br>
+			\( = {R^i}_{j|kl|}\boldsymbol{\omega}^k \wedge \boldsymbol{\omega}^l \)<br>
 			<br>
 			\( 0 = \textbf{d} P 
 				= \textbf{d} (\textbf{e}_i \boldsymbol{\omega}^i)
-				= \textbf{de}_i \boldsymbol{\omega}^i + \textbf{e}_i \textbf{d}\boldsymbol{\omega}^i 
-				= \textbf{e}_j {\boldsymbol{\omega}^j}_i \boldsymbol{\omega}^i + \textbf{e}_j \textbf{d} \boldsymbol{\omega}^j
-				= \textbf{e}_j ({\boldsymbol{\omega}^j}_i \boldsymbol{\omega}^i + \textbf{d} \boldsymbol{\omega}^j)
+				= \textbf{de}_i \wedge \boldsymbol{\omega}^i + \textbf{e}_i \textbf{d}\boldsymbol{\omega}^i 
+				= \textbf{e}_j {\boldsymbol{\omega}^j}_i \wedge \boldsymbol{\omega}^i + \textbf{e}_j \textbf{d} \boldsymbol{\omega}^j
+				= \textbf{e}_j ({\boldsymbol{\omega}^j}_i \wedge \boldsymbol{\omega}^i + \textbf{d} \boldsymbol{\omega}^j)
 			\)<br>
-			so \( {\boldsymbol{\omega}^j}_i \boldsymbol{\omega}^i + \textbf{d} \boldsymbol{\omega}^j = 0 \) and \( \textbf{d} \boldsymbol{\omega}^j = -{\boldsymbol{\omega}^j}_i \boldsymbol{\omega}^i \)<br> 
-			<br>
-			show \( \langle \textbf{d}^2 \textbf{u} \wedge \textbf{v} \rangle = .. {R^i}_{jkl} u^k v^l \)<br>
-			show \( {\textbf{R}^i}_j = {R^i}_{j|kl|} \boldsymbol{\omega}^k \wedge \boldsymbol{\omega}^l \) <br>
+			so \( {\boldsymbol{\omega}^j}_i \wedge \boldsymbol{\omega}^i + \textbf{d} \boldsymbol{\omega}^j = 0 \) and \( \textbf{d} \boldsymbol{\omega}^j = -{\boldsymbol{\omega}^j}_i \wedge \boldsymbol{\omega}^i \)<br> 
 			<br>
 			Sources:<br>
-			Misner, Charles W.; Thorne, Kip S.; Wheeler, John Archibald (1970), Gravitation, New York: W.H. Freeman. ISBN 0-7167-0344-0<br>
+			Misner, Charles W.; Thorne, Kip S.; Wheeler, John Archibald (1970), <i>Gravitation</i>, New York: W.H. Freeman. ISBN 0-7167-0344-0<br>
+			Flanders, Harley (1989), <i>Differential Forms With Applications to the Physical Sciences</i>, Mineola, New York: Dover Publications, ISBN 0-486-66169-5<br>
 		</div>
 		
 		<div id='webglfail' style='display:none'>
