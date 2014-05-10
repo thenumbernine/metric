@@ -361,11 +361,12 @@ _gaq.push(['_trackPageview']);
 				= \textbf{e}_i \otimes ({\boldsymbol{\omega}^i}_k \wedge \boldsymbol{\omega}^k + \textbf{d} \boldsymbol{\omega}^i)
 			\)<br>
 			so \( {\boldsymbol{\omega}^i}_k \wedge \boldsymbol{\omega}^k + \textbf{d} \boldsymbol{\omega}^i = 0 \)<br>
-			so \( \textbf{d} \boldsymbol{\omega}^i 
-				= -{\boldsymbol{\omega}^i}_k \wedge \boldsymbol{\omega}^k
-				= -{\Gamma^i}_{jk} \boldsymbol{\omega}^j \wedge \boldsymbol{\omega}^k
-				= -({\Gamma^i}_{jk} - {\Gamma^i}_{kj}) \boldsymbol{\omega}^j \otimes \boldsymbol{\omega}^k
-				= -{c_{kj}}^i \boldsymbol{\omega}^j \otimes \boldsymbol{\omega}^k
+			so \( \textbf{d} \boldsymbol{\omega}^k
+				= -{\boldsymbol{\omega}^k}_i \wedge \boldsymbol{\omega}^i
+				= -{\Gamma^k}_{ji} \boldsymbol{\omega}^j \wedge \boldsymbol{\omega}^i
+				= {\Gamma^k}_{ji} \boldsymbol{\omega}^i \wedge \boldsymbol{\omega}^j
+				= ({\Gamma^k}_{ji} - {\Gamma^k}_{ij}) \boldsymbol{\omega}^i \otimes \boldsymbol{\omega}^j
+				= {c_{ij}}^k \boldsymbol{\omega}^i \otimes \boldsymbol{\omega}^j
 			\)<br> 
 			This coincides with, in a holonomic basis, when \( \boldsymbol{\omega}^i = \textbf{d}x^i, \textbf{d} \boldsymbol{\omega}^i = \textbf{d}^2\textbf{x}^i = 0 \)<br>
 			<br>
