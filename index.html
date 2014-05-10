@@ -127,7 +127,6 @@ _gaq.push(['_trackPageview']);
 			1st kind symmetry: \( \Gamma_{i[jk]} = {1 \over 2} (\Gamma_{ijk} - \Gamma_{ikj}) = {1 \over 4} (\partial_k g_{ij} + \partial_j g_{ik} - \partial_i g_{jk} + c_{ijk} + c_{ikj} - c_{jki} - \partial_j g_{ik} - \partial_k g_{ij} + \partial_i g_{kj} - c_{ikj} - c_{ijk} + c_{kji}) = {1 \over 4} ( c_{jki} - c_{kji} ) = {1 \over 2} c_{kji} \)<br>
 			which reduces to 0 in a holonomic basis<br>
 			1st kind antisymmetry: \( \Gamma_{(ij)k} = {1 \over 2} (\Gamma_{ijk} + \Gamma_{jik}) = {1 \over 4} (\partial_k g_{ij} + \partial_j g_{ik} - \partial_i g_{jk} + c_{ijk} + c_{ikj} - c_{jki} + \partial_k g_{ji} + \partial_i g_{jk} - \partial_j g_{ik} + c_{jik} + c_{jki} - c_{ikj}) = {1 \over 4} (2 \partial_k g_{ij} + c_{ijk} + c_{jik}) = {1 \over 2} \partial_k g_{ij} \)<br>
-			which reduces to 0 in a constant metric, or under Riemann normal coordinates<br>
 			<br>
 			connection coefficient of the 2nd kind: \( {\Gamma^i}_{jk} = g^{il} \Gamma_{ljk} \)<br>
 			<br>
@@ -314,11 +313,11 @@ _gaq.push(['_trackPageview']);
 			\( \textbf{d}(\textbf{u} \cdot \textbf{v}) 
 				= \textbf{du} \cdot \textbf{v} + \textbf{u} \cdot \textbf{dv}
 			\)<br>
-			exterior derivative of vector basis: 
+			exterior derivative of metric tensor: 
 			\( \textbf{d}g_{ij} 
 				= (\textbf{de}_i \cdot \textbf{e}_j) 
 				= \textbf{de}_i \cdot \textbf{e}_j + \textbf{e}_i \cdot \textbf{de}_j
-				= \textbf{e}_k {\boldsymbol{\omega}^k}_i \cdot \textbf{e}_j + \textbf{e}_i \cdot \textbf{e}_k {\boldsymbol{\omega}^k}_j
+				= \textbf{e}_k \otimes {\boldsymbol{\omega}^k}_i \cdot \textbf{e}_j + \textbf{e}_i \cdot \textbf{e}_k \otimes {\boldsymbol{\omega}^k}_j
 				= g_{jk} {\boldsymbol{\omega}^k}_i + g_{ik} {\boldsymbol{\omega}^k}_j
 				= \boldsymbol{\omega}_{ji} + \boldsymbol{\omega}_{ij}
 			\)<br>
@@ -339,7 +338,8 @@ _gaq.push(['_trackPageview']);
 					+ v^i \textbf{e}_k {\boldsymbol{\omega}^k}_j \wedge {\boldsymbol{\omega}^j}_i
 					+ v^i \textbf{e}_j \textbf{d}{\boldsymbol{\omega}^j}_i
 			\)<br>
-			...zero exterior derivatives of one-forms... 
+			<!-- TODO i'm zeroing the 2dv^i term as well, find out why -->
+			...zero second exterior derivatives of one-forms... 
 			\( = v^i \textbf{e}_j {\boldsymbol{\omega}^j}_k \wedge {\boldsymbol{\omega}^k}_i
 				+ v^i \textbf{e}_j \textbf{d}{\boldsymbol{\omega}^j}_i \)<br>
 			let \( {\textbf{R}^i}_j = {\boldsymbol{\omega}^i}_k \wedge {\boldsymbol{\omega}^k}_j + \textbf{d}{\boldsymbol{\omega}^i}_j \)<br>
@@ -355,12 +355,19 @@ _gaq.push(['_trackPageview']);
 			\( = {R^i}_{j|kl|}\boldsymbol{\omega}^k \wedge \boldsymbol{\omega}^l \)<br>
 			<br>
 			\( 0 = \textbf{d} P 
-				= \textbf{d} (\textbf{e}_i \boldsymbol{\omega}^i)
-				= \textbf{de}_i \wedge \boldsymbol{\omega}^i + \textbf{e}_i \textbf{d}\boldsymbol{\omega}^i 
-				= \textbf{e}_j {\boldsymbol{\omega}^j}_i \wedge \boldsymbol{\omega}^i + \textbf{e}_j \textbf{d} \boldsymbol{\omega}^j
-				= \textbf{e}_j ({\boldsymbol{\omega}^j}_i \wedge \boldsymbol{\omega}^i + \textbf{d} \boldsymbol{\omega}^j)
+				= \textbf{d} (\textbf{e}_k \otimes \boldsymbol{\omega}^k)
+				= \textbf{de}_k \wedge \boldsymbol{\omega}^k + \textbf{e}_k \otimes \textbf{d}\boldsymbol{\omega}^k 
+				= \textbf{e}_i \otimes {\boldsymbol{\omega}^i}_k \wedge \boldsymbol{\omega}^k + \textbf{e}_i \otimes \textbf{d} \boldsymbol{\omega}^i
+				= \textbf{e}_i \otimes ({\boldsymbol{\omega}^i}_k \wedge \boldsymbol{\omega}^k + \textbf{d} \boldsymbol{\omega}^i)
 			\)<br>
-			so \( {\boldsymbol{\omega}^j}_i \wedge \boldsymbol{\omega}^i + \textbf{d} \boldsymbol{\omega}^j = 0 \) and \( \textbf{d} \boldsymbol{\omega}^j = -{\boldsymbol{\omega}^j}_i \wedge \boldsymbol{\omega}^i \)<br> 
+			so \( {\boldsymbol{\omega}^i}_k \wedge \boldsymbol{\omega}^k + \textbf{d} \boldsymbol{\omega}^i = 0 \)<br>
+			so \( \textbf{d} \boldsymbol{\omega}^i 
+				= -{\boldsymbol{\omega}^i}_k \wedge \boldsymbol{\omega}^k
+				= -{\Gamma^i}_{jk} \boldsymbol{\omega}^j \wedge \boldsymbol{\omega}^k
+				= -({\Gamma^i}_{jk} - {\Gamma^i}_{kj}) \boldsymbol{\omega}^j \otimes \boldsymbol{\omega}^k
+				= -{c_{kj}}^i \boldsymbol{\omega}^j \otimes \boldsymbol{\omega}^k
+			\)<br> 
+			This coincides with, in a holonomic basis, when \( \boldsymbol{\omega}^i = \textbf{d}x^i, \textbf{d} \boldsymbol{\omega}^i = \textbf{d}^2\textbf{x}^i = 0 \)<br>
 			<br>
 			Sources:<br>
 			Misner, Charles W.; Thorne, Kip S.; Wheeler, John Archibald (1970), <i>Gravitation</i>, New York: W.H. Freeman. ISBN 0-7167-0344-0<br>
