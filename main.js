@@ -472,10 +472,12 @@ $(document).ready(function() {
 			var coordCallbacks = [];	//coordCallbacks[xyz]
 			var coordDerivs = [];		//coordDerivs[xyz][uv|normal]
 			var metric = [];			//metric[uv][uv] = g_ij = e_i dot e_j
-			var invMetric = [];			//invMetric[uv][uv] = g^ij
-			var diffMetric = [];		//diffMetric[uv][uv][uv] = g_ij,k
-			var conn1st = [];			//conn1st[uv][uv][uv] = conn_ijk = 1/2 (g_ij,k + g_ik,j - g_jk,i)
+			var metricEqn = [];
+			var invMetricEqn = [];		//invMetricEqn[uv][uv] = g^ij
+			var diffMetricEqn = [];		//diffMetricEqn[uv][uv][uv] = g_ij,k
+			var conn1stEqn = [];		//conn1stEqn[uv][uv][uv] = conn_ijk = 1/2 (g_ij,k + g_ik,j - g_jk,i)
 			var conn2nd = [];			//conn2nd[uv][uv][uv] = conn^i_jk = g^il * conn_ljk
+			var conn2ndEqn = [];
 			console.log('generating coordinate chart functions...');
 			var failed = false;
 			var equations = [];
@@ -495,55 +497,39 @@ $(document).ready(function() {
 				//get metric and its derivative 
 				$.each(parameters, function(i,u) {
 					metric[i] = [];
-					diffMetric[i] = [];
+					metricEqn[i] = [];
+					diffMetricEqn[i] = [];
 					$.each(parameters, function(j,v) {
 						var sum = [];
 						$.each(equations, function(k,eqn) {
 							sum.push('diff('+eqn+', '+u+') * diff('+eqn+', '+v+')');
 						});
-						var eqn = sum.join(' + ');
-						metric[i][j] = luaEqnToJSFunc(eqn, parameters.join(', '));
-						diffMetric[i][j] = [];
+						metricEqn[i][j] = sum.join(' + ');
+						metric[i][j] = luaEqnToJSFunc(metricEqn[i][j], parameters.join(', '));
+						diffMetricEqn[i][j] = [];
 						$.each(parameters, function(k,w) {
-							var diffeqn = 'diff('+eqn+', '+w+')';
-							console.log(diffeqn);
-							diffMetric[i][j][k] = luaEqnToJSFunc(diffeqn, parameters.join(', '));
+							diffMetricEqn[i][j][k] = 'diff('+metricEqn[i][j]+', '+w+')';
 						});
 					});
 				});
 
 				//inverse metric
-				var metricDet = function() {
-					return metric[0][0].apply(undefined, arguments)
-						* metric[1][1].apply(undefined, arguments)
-						- metric[1][0].apply(undefined, arguments)
-						* metric[0][1].apply(undefined, arguments);
-				};
-				invMetric = [
-					[	//00
-						function() { return metric[1][1].apply(undefined, arguments) / metricDet.apply(undefined, arguments); },
-						//01
-						function() { return -metric[0][1].apply(undefined, arguments) / metricDet.apply(undefined, arguments); }
-					],
-					[	//10
-						function() { return -metric[1][0].apply(undefined, arguments) / metricDet.apply(undefined, arguments); },
-						//11
-						function() { return metric[0][0].apply(undefined, arguments) / metricDet.apply(undefined, arguments); }
-					]
+				if (parameters.length != 2) throw 'only works with two parameters';
+				var metricDetEqn = '('+metricEqn[0][0]+') * ('+metricEqn[1][1]+') - ('+metricEqn[1][0]+') * ('+metricEqn[0][1]+')';
+				var invMetricEqn = [
+					[	'('+metricEqn[1][1]+') / ('+metricDetEqn+')',	//00
+						'-('+metricEqn[0][1]+') / ('+metricDetEqn+')'],	//01
+					[	'-('+metricEqn[1][0]+') / ('+metricDetEqn+')',	//10
+						'('+metricEqn[0][0]+') / ('+metricDetEqn+')']
 				];
 	
 				//1st conns
 				$.each(parameters, function(i,u) {
-					conn1st[i] = [];
+					conn1stEqn[i] = [];
 					$.each(parameters, function(j,v) {
-						conn1st[i][j] = [];
+						conn1stEqn[i][j] = [];
 						$.each(parameters, function(k,w) {
-							conn1st[i][j][k] = function() {
-								return .5 * (
-									diffMetric[i][j][k].apply(undefined, arguments) 
-									+ diffMetric[i][k][j].apply(undefined, arguments) 
-									- diffMetric[j][k][i].apply(undefined, arguments));
-							};
+							conn1stEqn[i][j][k] = '1/2 * ('+diffMetricEqn[i][j][k]+' + '+diffMetricEqn[i][k][j]+' - '+diffMetricEqn[j][k][i]+')';
 						});
 					});
 				});
@@ -551,16 +537,17 @@ $(document).ready(function() {
 				//2nd conns
 				$.each(parameters, function(i,u) {
 					conn2nd[i] = [];
+					conn2ndEqn[i] = [];
 					$.each(parameters, function(j,v) {
 						conn2nd[i][j] = [];
+						conn2ndEqn[i][j] = [];
 						$.each(parameters, function(k,w) {
-							conn2nd[i][j][k] = function() {
-								var sum = 0;
-								for (var l = 0; l < parameters.length; ++l) {
-									sum += invMetric[i][l].apply(undefined, arguments) * conn1st[l][j][k].apply(undefined, arguments);
-								}
-								return sum;
+							var sum = [];
+							for (var l = 0; l < parameters.length; ++l) {
+								sum.push('('+invMetricEqn[i][l]+') * ('+conn1stEqn[l][j][k]+')');
 							}
+							conn2ndEqn[i][j][k] = sum.join(' + ');
+							conn2nd[i][j][k] = luaEqnToJSFunc(conn2ndEqn[i][j][k], parameters.join(', '));
 						});
 					});
 				});
