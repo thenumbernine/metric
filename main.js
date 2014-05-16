@@ -663,62 +663,95 @@ $(document).ready(function() {
 	var coordLabels = ['x', 'y', 'z'];
 
 	//args: done: what to execute next
-	var updateEquations = function(args) {
+	var updateEquations = function() {
 		var doUpdateEquations = function() {
-			//args: callback = what to execute, output = where to redirect output
+			//args: callback = what to execute, output = where to redirect output, error = where to redirect errors
 			var capture = function(args) {
 				//now cycle through coordinates, evaluate data points, and get the data back into JS
 				//push module output and redirect to a buffer of my own
 				var oldPrint = lua.print;
-				lua.print = args.output;
+				var oldError = lua.printErr;
+				if (args.output !== undefined) lua.print = args.output;
+				if (args.error !== undefined) lua.printErr = args.error;
 				args.callback();
 				lua.print = oldPrint;
+				lua.printErr = oldError;
 			};
-		
+			
+			//declare parameter variables
+			$.each($('#parameters').val().split(',').map(function(s) { return s.trim(); }), function(j,param) {
+				lua.executeAndPrint(param+" = Variable('"+param+"')");
+			});
+			
+			$('#constants').val().split(',').map(function(s) { 
+				s = s.trim();
+				var eqs = s.split('=').map(function(side) { return side.trim(); });
+				var param = eqs[0];
+				var value = eqs[1];
+				lua.executeAndPrint(param+" = Constant("+value+")");
+			});		
+			
 			var coordCallbacks = [];
 			console.log('generating coordinate chart functions...');
-			//TODO compile equations here
+			//compile equations here
+			var failed = false;
 			$.each(coordLabels, function(i,x) {
-				//declare parameter variables
-				$.each($('#parameters').val().split(',').map(function(s) { return s.trim(); }), function(j,param) {
-					lua.executeAndPrint(param+" = Variable('"+param+"')");
-				});
-				
-				$('#constants').val().split(',').map(function(s) { 
-					s = s.trim();
-					var eqs = s.split('=').map(function(side) { return side.trim(); });
-					var param = eqs[0];
-					var value = eqs[1];
-					lua.executeAndPrint(param+" = Constant("+value+")");
-				});
 				//assignment
-				var eqn_x = $('#equation'+coordLabels[i].toUpperCase()).val();
-				lua.executeAndPrint("eqn_"+x+" = simplify("+eqn_x+")");
-				lua.executeAndPrint("if type(eqn_"+x+") == 'number' then eqn_"+x+" = Constant(eqn_"+x+") end");
-			
+				var eqn = $('#equation'+x.toUpperCase()).val();
+				console.log(x+' equation is '+eqn);
+				capture({
+					callback : function() {
+						Lua.execute("eqn = "+eqn);
+						//directing error doesn't work -- all errors result in stdout printing "ERROR attempt to call string" 
+						Lua.execute("if type(eqn) == 'number' then eqn = Constant(eqn) end");
+					},
+					output : function(s) {
+						//don't throw -- Lua.execute will catch it.
+						console.log('Lua error! '+s);
+						failed = true;
+					}
+				});
+				if (failed) return true;	//'return true' means break in $.each	
+				
 				capture({
 					callback : function() {
 						var luaCmd = 
-							"print(eqn_"+x+":compile{"
+							"print(eqn:compile{"
 							+$('#parameters').val()
 							+"})";
 						console.log('executing lua '+luaCmd);
 						//print commands are going to the old output ...
 						Lua.execute(luaCmd);
 					},
-					output : function(output) {
-						console.log('got output '+output);
-						var jsCmd = 'exec_'+x+' = function('
+					output : function(s) {
+						console.log('got Lua output '+s);
+						var jsCmd = 'generatedCoordMap = function('
 							+$('#parameters').val()
 							+') { return '
-							+output.replace(/math/g, 'Math')
+							+s.replace(/math/g, 'Math')
 							+'; }';
 						console.log(jsCmd);
-						eval(jsCmd);
-						coordCallbacks[i] = window['exec_'+x];
+						try {
+							eval(jsCmd);
+							coordCallbacks[i] = window.generatedCoordMap;
+						} catch (e) {
+							failed = true;
+						}
 					}
 				});
+				if (failed) return true;
 			});
+			if (failed) {
+				//color the failed input textarea red
+				$.each(coordLabels, function(i,x) {
+					$('#equation'+x.toUpperCase()).css({background:'rgb(255,127,127)'});
+				});
+				return;
+			} else {
+				$.each(coordLabels, function(i,x) {
+					$('#equation'+x.toUpperCase()).css({background:'white'});
+				});
+			}
 			currentCoordChart.mapping = function(coord) {
 				var mappedCoord = [];
 				for (var k = 0; k < coordLabels.length; ++k) {
@@ -726,7 +759,7 @@ $(document).ready(function() {
 				}
 				return mappedCoord;
 			};
-			if (args.done) args.done();
+			reset();	//regenerate mesh
 		};
 		//wait for done lua loading
 		var loadingInterval = setInterval(function() {
@@ -737,6 +770,15 @@ $(document).ready(function() {
 		}, 100);
 		
 	};
+
+	var allInputs = coordLabels.map(function(x) { return 'equation'+x.toUpperCase(); }).concat(['parameters', 'constants']);
+	$.each(allInputs, function(i,input) {
+		$('#'+input)
+			.on('change', updateEquations)
+			.on('keypress', updateEquations)
+			.on('paste', updateEquations)
+			.on('input', updateEquations);
+	});
 
 	$.each(coordCharts, function(name,coordChart) {
 		var option = $('<option>', {
@@ -767,7 +809,7 @@ $(document).ready(function() {
 				$('#constants').val(constantText.concat());
 			}
 		}
-		updateEquations({done:reset});
+		updateEquations();
 	}
 
 	var tmpQ = quat.create();	
