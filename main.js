@@ -70,15 +70,6 @@ var coordCharts = {
 		],
 		initialCoord : [0.26623666555845704, 1.8215957403167709],
 		initialDirection : [0, 1],
-		mapping : function(coord) {
-			var theta = coord[0];
-			var phi = coord[1];
-			var r = this.constants.r;
-			var x = r * Math.sin(theta) * Math.cos(phi);
-			var y = r * Math.sin(theta) * Math.sin(phi);
-			var z = r * Math.cos(theta);
-			return [x, y, z];
-		},
 		diff : function(coord, dim) {
 			var theta = coord[0];
 			var phi = coord[1];
@@ -170,11 +161,6 @@ var coordCharts = {
 			'r * cos(phi)',
 			'r * sin(phi)'
 		],
-		mapping : function(coord) {
-			var r = coord[0];
-			var phi = coord[1];
-			return [r * Math.cos(phi), r * Math.sin(phi), 0];
-		},
 		diff : function(coord, dim) {
 			var r = coord[0];
 			var phi = coord[1];
@@ -234,17 +220,6 @@ var coordCharts = {
 			'(r * sin(theta) + R) * sin(phi)',
 			'r *cos(theta)'
 		],
-		mapping : function(coord) {
-			var theta = coord[0];
-			var phi = coord[1];
-			var r = this.constants.r;
-			var R = this.constants.R;
-			return [
-				(r * Math.sin(theta) + R) * Math.cos(phi),
-				(r * Math.sin(theta) + R) * Math.sin(phi),
-				r * Math.cos(theta)
-			];
-		},
 		diff : function(coord, dim) {
 			var theta = coord[0];
 			var phi = coord[1];
@@ -328,11 +303,6 @@ var coordCharts = {
 		equations : [
 			'u', 'v', '-u * u - v * v'
 		],
-		mapping : function(coord) {
-			var u = coord[0];
-			var v = coord[1];
-			return [u, v, -u * u - v * v];
-		},
 		diff : function(coord, dim) {
 			var u = coord[0];
 			var v = coord[1];
@@ -379,11 +349,6 @@ var coordCharts = {
 		coordinateMin : [-1,-1],
 		coordinateMax : [1,1],
 		equations : [ 'u', 'v', 'u * u - v * v' ],
-		mapping : function(coord) {
-			var u = coord[0];
-			var v = coord[1];
-			return [u, v, u * u - v * v];
-		},
 		diff : function(coord, dim) {
 			var u = coord[0];
 			var v = coord[1];
@@ -688,6 +653,7 @@ $(document).ready(function() {
 			console.log('loaded lua');
 			Lua.execute("package.path = package.path .. ';./?/init.lua'");
 			this.executeAndPrint("require 'symmath'");
+			this.executeAndPrint("symmath.usePowerSymbol = false");
 			this.executeAndPrint("for k,v in pairs(symmath) do _G[k] = v end");
 			luaDoneLoading = true;
 		},
@@ -696,14 +662,16 @@ $(document).ready(function() {
 		
 	var coordLabels = ['x', 'y', 'z'];
 
-	var updateEquations = function() {
+	//args: done: what to execute next
+	var updateEquations = function(args) {
 		var doUpdateEquations = function() {
-			var capture = function(callback, output) {
+			//args: callback = what to execute, output = where to redirect output
+			var capture = function(args) {
 				//now cycle through coordinates, evaluate data points, and get the data back into JS
 				//push module output and redirect to a buffer of my own
 				var oldPrint = lua.print;
-				lua.print = output;
-				callback();
+				lua.print = args.output;
+				args.callback();
 				lua.print = oldPrint;
 			};
 		
@@ -712,37 +680,43 @@ $(document).ready(function() {
 			//TODO compile equations here
 			$.each(coordLabels, function(i,x) {
 				//declare parameter variables
-				$.each(currentCoordChart.parameters, function(j,param) {
-					lua.executeAndPrint(param+' = Variable("'+param+'")');
+				$.each($('#parameters').val().split(',').map(function(s) { return s.trim(); }), function(j,param) {
+					lua.executeAndPrint(param+" = Variable('"+param+"')");
 				});
-				if (currentCoordChart.constants !== undefined) {
-					$.each(currentCoordChart.constants, function(param,value) {
-						lua.executeAndPrint(param+' = Constant('+value+')');
-					});
-				}
+				
+				$('#constants').val().split(',').map(function(s) { 
+					s = s.trim();
+					var eqs = s.split('=').map(function(side) { return side.trim(); });
+					var param = eqs[0];
+					var value = eqs[1];
+					lua.executeAndPrint(param+" = Constant("+value+")");
+				});
 				//assignment
 				var eqn_x = $('#equation'+coordLabels[i].toUpperCase()).val();
-				lua.executeAndPrint('eqn_'+x+' = simplify('+eqn_x+')');
-				lua.executeAndPrint('if type(eqn_'+x+') == "number" then eqn_'+x+' = Constant(eqn_'+x+') end');
+				lua.executeAndPrint("eqn_"+x+" = simplify("+eqn_x+")");
+				lua.executeAndPrint("if type(eqn_"+x+") == 'number' then eqn_"+x+" = Constant(eqn_"+x+") end");
 			
-				capture(function() {
-					var luaCmd = 
-						'print(eqn_'+x+':compile{'
-						+currentCoordChart.parameters.join(', ')
-						+'})';
-					console.log('executing lua '+luaCmd);
-					//print commands are going to the old output ...
-					Lua.execute(luaCmd);
-				}, function(output) {
-					console.log('got output '+output);
-					var jsCmd = 'exec_'+x+' = function('
-						+currentCoordChart.parameters.join(', ')
-						+') { return '
-						+output.replace(/math/g, 'Math')
-						+'; }';
-					console.log(jsCmd);
-					eval(jsCmd);
-					coordCallbacks[i] = window['exec_'+x];
+				capture({
+					callback : function() {
+						var luaCmd = 
+							"print(eqn_"+x+":compile{"
+							+$('#parameters').val()
+							+"})";
+						console.log('executing lua '+luaCmd);
+						//print commands are going to the old output ...
+						Lua.execute(luaCmd);
+					},
+					output : function(output) {
+						console.log('got output '+output);
+						var jsCmd = 'exec_'+x+' = function('
+							+$('#parameters').val()
+							+') { return '
+							+output.replace(/math/g, 'Math')
+							+'; }';
+						console.log(jsCmd);
+						eval(jsCmd);
+						coordCallbacks[i] = window['exec_'+x];
+					}
 				});
 			});
 			currentCoordChart.mapping = function(coord) {
@@ -752,6 +726,7 @@ $(document).ready(function() {
 				}
 				return mappedCoord;
 			};
+			if (args.done) args.done();
 		};
 		//wait for done lua loading
 		var loadingInterval = setInterval(function() {
@@ -781,6 +756,7 @@ $(document).ready(function() {
 				$('#equation'+coordLabels[i].toUpperCase()).val(equation);
 			});
 		}
+		$('#parameters').val(currentCoordChart.parameters.join(', '));
 		$('#constants').val('');
 		if (currentCoordChart.constants !== undefined) {
 			var constantText = [];
@@ -791,8 +767,7 @@ $(document).ready(function() {
 				$('#constants').val(constantText.concat());
 			}
 		}
-		updateEquations();
-		reset();
+		updateEquations({done:reset});
 	}
 
 	var tmpQ = quat.create();	
