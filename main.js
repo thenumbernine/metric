@@ -427,18 +427,19 @@ var coordCharts = {
 var currentCoordChart;
 
 var intDivs = [120,120];
+
+var intCoordToCoord = function(intCoord) {
+	var coord = [];
+	var coordMin = currentCoordChart.coordinateMin;
+	var coordMax = currentCoordChart.coordinateMax;
+	for (var k = 0; k < intCoord.length; ++k) {
+		coord[k] = intCoord[k] / (intDivs[k]-1) * (coordMax[k] - coordMin[k]) + coordMin[k];
+	}
+	return coord;
+};
+
 function reset() {
 	//generate metric geometry
-	var intCoordToCoord = function(intCoord) {
-		var coord = [];
-		var coordMin = currentCoordChart.coordinateMin;
-		var coordMax = currentCoordChart.coordinateMax;
-		for (var k = 0; k < intCoord.length; ++k) {
-			coord[k] = intCoord[k] / (intDivs[k]-1) * (coordMax[k] - coordMin[k]) + coordMin[k];
-		}
-		return coord;
-	};
-
 	var thetaDiv = intDivs[0];
 	var phiDiv = intDivs[1];
 	for (var itheta = 0; itheta < thetaDiv; ++itheta) {
@@ -675,7 +676,93 @@ $(document).ready(function() {
 	$('#tools_direction').click(function() { inputState = 'direction'; });
 
 	currentCoordChart = coordCharts.Spherical;
-	
+
+	//init lua
+	console.log('loading lua');
+	var luaDoneLoading = false;
+	var lua = new EmbeddedLuaInterpreter({
+		id : 'lua-vm-container',
+		packages : ['ext', 'symmath'],
+		packageTests : ['symmath'],
+		done : function() {
+			console.log('loaded lua');
+			Lua.execute("package.path = package.path .. ';./?/init.lua'");
+			this.executeAndPrint("require 'symmath'");
+			this.executeAndPrint("for k,v in pairs(symmath) do _G[k] = v end");
+			luaDoneLoading = true;
+		},
+		autoLaunch : true
+	});
+		
+	var coordLabels = ['x', 'y', 'z'];
+
+	var updateEquations = function() {
+		var doUpdateEquations = function() {
+			var capture = function(callback, output) {
+				//now cycle through coordinates, evaluate data points, and get the data back into JS
+				//push module output and redirect to a buffer of my own
+				var oldPrint = lua.print;
+				lua.print = output;
+				callback();
+				lua.print = oldPrint;
+			};
+		
+			var coordCallbacks = [];
+			console.log('generating coordinate chart functions...');
+			//TODO compile equations here
+			$.each(coordLabels, function(i,x) {
+				//declare parameter variables
+				$.each(currentCoordChart.parameters, function(j,param) {
+					lua.executeAndPrint(param+' = Variable("'+param+'")');
+				});
+				if (currentCoordChart.constants !== undefined) {
+					$.each(currentCoordChart.constants, function(param,value) {
+						lua.executeAndPrint(param+' = Constant('+value+')');
+					});
+				}
+				//assignment
+				var eqn_x = $('#equation'+coordLabels[i].toUpperCase()).val();
+				lua.executeAndPrint('eqn_'+x+' = simplify('+eqn_x+')');
+				lua.executeAndPrint('if type(eqn_'+x+') == "number" then eqn_'+x+' = Constant(eqn_'+x+') end');
+			
+				capture(function() {
+					var luaCmd = 
+						'print(eqn_'+x+':compile{'
+						+currentCoordChart.parameters.join(', ')
+						+'})';
+					console.log('executing lua '+luaCmd);
+					//print commands are going to the old output ...
+					Lua.execute(luaCmd);
+				}, function(output) {
+					console.log('got output '+output);
+					var jsCmd = 'exec_'+x+' = function('
+						+currentCoordChart.parameters.join(', ')
+						+') { return '
+						+output.replace(/math/g, 'Math')
+						+'; }';
+					console.log(jsCmd);
+					eval(jsCmd);
+					coordCallbacks[i] = window['exec_'+x];
+				});
+			});
+			currentCoordChart.mapping = function(coord) {
+				var mappedCoord = [];
+				for (var k = 0; k < coordLabels.length; ++k) {
+					mappedCoord[k] = coordCallbacks[k].apply(undefined, coord);
+				}
+				return mappedCoord;
+			};
+		};
+		//wait for done lua loading
+		var loadingInterval = setInterval(function() {
+			if (luaDoneLoading) {
+				clearInterval(loadingInterval);
+				doUpdateEquations();
+			}
+		}, 100);
+		
+	};
+
 	$.each(coordCharts, function(name,coordChart) {
 		var option = $('<option>', {
 			text : name,
@@ -688,23 +775,23 @@ $(document).ready(function() {
 	});
 	function selectCoordChart(name) {
 		currentCoordChart = coordCharts[name];
-		var coordlabels = ['x', 'y', 'z'];
-		$.each(coordlabels, function(i,x) { $('#equation'+x.toUpperCase()).text(''); });
+		$.each(coordLabels, function(i,x) { $('#equation'+x.toUpperCase()).val('0'); });
 		if (currentCoordChart.equations !== undefined) {
 			$.each(currentCoordChart.equations, function(i,equation) {
-				$('#equation'+coordlabels[i].toUpperCase()).text(coordlabels[i] + ' = ' + equation);
+				$('#equation'+coordLabels[i].toUpperCase()).val(equation);
 			});
 		}
-		$('#constants').text('');
+		$('#constants').val('');
 		if (currentCoordChart.constants !== undefined) {
 			var constantText = [];
 			$.each(currentCoordChart.constants, function(k,v) {
 				constantText.push(k+'='+v);
 			});
 			if (constantText.length > 0) {
-				$('#constants').text('for '+constantText.concat());
+				$('#constants').val(constantText.concat());
 			}
 		}
+		updateEquations();
 		reset();
 	}
 
@@ -981,8 +1068,8 @@ void main() {
 
 	gl.enable(gl.DEPTH_TEST);
 
-	selectCoordChart('Spherical');
-
+	selectCoordChart('Spherical');	
+	
 	$(window).resize(resize);
 	resize();
 	

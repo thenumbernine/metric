@@ -10,6 +10,7 @@
 		<script type='text/javascript' src='/js/jquery-1.11.0.min.js'></script>
 		<script type="text/javascript" src="/js/purl.js"></script>
 		<script type='text/javascript' src='/js/util.js'></script>
+		<script type='text/javascript' src='/js/lua.vm-util.js'></script>
 		<script type='text/javascript' src='/js/gl-matrix.2.2.0.min.js'></script>
 		<script type='text/javascript' src='/js/gl-util.js'></script>
 		<script type='text/javascript' src='/js/mouse3d.js'></script>
@@ -51,10 +52,10 @@ _gaq.push(['_trackPageview']);
 			<select id='coordinateSystem'></select><br>
 			Equations:<br>
 			<div id='equations'>
-				<div id='equationX'></div>
-				<div id='equationY'></div>
-				<div id='equationZ'></div>
-				<div id='constants'></div>
+				x = <input id='equationX' style='width:200px'/><br>
+				y = <input id='equationY' style='width:200px'/><br>
+				z = <input id='equationZ' style='width:200px'/><br>
+				for <input id='constants' style='width:200px'/><br>
 			</div>
 		</div>
 			
@@ -389,5 +390,7 @@ _gaq.push(['_trackPageview']);
 			Sorry guys, IE doesn't plan to support WebGL.<br>
 			Consider using a more <a href='http://www.w3schools.com/browsers/browsers_stats.asp'>standard compliant</a> browser.<br>
 		</div>
+
+		<div id='lua-vm-container' style='display:none'></div>
 	</body>
 </html>
