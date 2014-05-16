@@ -69,87 +69,7 @@ var coordCharts = {
 			'r * cos(theta)'
 		],
 		initialCoord : [0.26623666555845704, 1.8215957403167709],
-		initialDirection : [0, 1],
-		diff : function(coord, dim) {
-			var theta = coord[0];
-			var phi = coord[1];
-			var r = this.constants.r;
-			switch (dim) {
-			case 0:
-				return [
-					r * Math.cos(theta) * Math.cos(phi),
-					r * Math.cos(theta) * Math.sin(phi),
-					-r * Math.sin(theta)];
-			case 1:
-				return [
-					-r * Math.sin(theta) * Math.sin(phi),
-					r * Math.sin(theta) * Math.cos(phi),
-					0];
-			case 2:	//normal
-				return [
-					Math.sin(theta) * Math.cos(phi),
-					Math.sin(theta) * Math.sin(phi),
-					Math.cos(theta)];
-			}
-		},
-		unitDiff : function(coord, dim) {
-			var theta = coord[0];
-			var phi = coord[1];
-			var r = this.constants.r;
-			switch (dim) {
-			case 0:
-				return [
-					Math.cos(theta) * Math.cos(phi),
-					Math.cos(theta) * Math.sin(phi),
-					-Math.sin(theta)];
-			case 1:
-				return [
-					-Math.sin(phi),
-					Math.cos(phi),
-					0];
-			case 2:
-				return [
-					Math.sin(theta) * Math.cos(phi),
-					Math.sin(theta) * Math.sin(phi),
-					Math.cos(theta)];
-			}
-		},
-		// delta_k e_j = Gamma^i_jk e_i
-		// maybe I should add the extrinsic components ... 
-		//connection(coord, k,j)[i] == Gamma^i_jk
-		connection : function(coord, k, j) {
-			var theta = coord[0];
-			var phi = coord[1];
-			var r = this.constants.r;
-			return [
-				//deriv of e_theta
-				[
-					//wrt e_theta
-					[
-						0, //conn^theta_theta_theta,
-						0, //conn^phi_theta_theta
-					],
-					//wrt e_phi
-					[
-						0, //conn^theta_theta_phi
-						1/Math.tan(theta), //conn^phi_theta_phi
-					],
-				],
-				//deriv of e_phi
-				[
-					//wrt e_theta
-					[
-						0, //conn^theta_phi_theta
-						1/Math.tan(theta), //conn^phi_phi_theta
-					],
-					//wrt e_phi
-					[
-						-.5 * Math.sin(2 * theta), //conn^theta_phi_phi
-						0, //conn^phi_phi_phi
-					],
-				],
-			][k][j];	//one more reason why I hate javascript: array construction and dereferencing syntax
-		}
+		initialDirection : [0, 1]
 	},
 	Polar : {
 		initialCoord : [0.26623666555845704, 1.8215957403167709],
@@ -161,53 +81,10 @@ var coordCharts = {
 			'r * cos(phi)',
 			'r * sin(phi)'
 		],
-		diff : function(coord, dim) {
-			var r = coord[0];
-			var phi = coord[1];
-			switch (dim) {
-			case 0: return [Math.cos(phi), Math.sin(phi), 0];
-			case 1: return [-r * Math.sin(phi), r * Math.cos(phi), 0];
-			case 2: return [0,0,1];
-			}
-		},
-		unitDiff : function(coord, dim) {
-			var r = coord[0];
-			var phi = coord[1];
-			switch (dim) {
-			case 0: return [Math.cos(phi), Math.sin(phi), 0];
-			case 1: return [-Math.sin(phi), Math.cos(phi), 0];
-			case 2: return [0,0,1];
-			}
-		},
-		/*
-		metric: g_rr = 1, g_phi_phi = r^2
-		inverse: g^rr = 1 g^phi^phi = 1/r^2
-		partial: g_phi_phi,r = 2r
-		conn: conn_phi_phi_r = conn_phi_r_phi = 1/2 g_phi_phi,r = r 
-			conn_r_phi_phi = -r
-		2nd: conn^phi_phi_r = conn^phi_r_phi = 1/r
-			conn^r_phi_phi = -r
-		*/
-		connection : function(coord, k, j) {
-			var r = coord[0];
-			var phi = coord[1];
-			return [
-				[
-					[0, 0],
-					[0, 1/r]
-				],
-				[
-					[0, 1/r],
-					[-r, 0]
-				],
-			][k][j]
-		},
 		initialCoord : [1, 0],
 		initialDirection : [0, 1]
 	},
 	Torus : {
-		initialCoord : [0.26623666555845704, 1.8215957403167709],
-		initialDirection : [0, 1],
 		constants : {
 			r : .25,
 			R : 1
@@ -220,173 +97,26 @@ var coordCharts = {
 			'(r * sin(theta) + R) * sin(phi)',
 			'r *cos(theta)'
 		],
-		diff : function(coord, dim) {
-			var theta = coord[0];
-			var phi = coord[1];
-			var r = this.constants.r;
-			var R = this.constants.R;
-			switch (dim) {
-			case 0:	//partial_theta
-				return [
-					r * Math.cos(theta) * Math.cos(phi),
-					r * Math.cos(theta) * Math.sin(phi),
-					-r * Math.sin(theta)];
-			case 1: //partial_phi
-				return [
-					-(r * Math.sin(theta) + R) * Math.sin(phi),
-					(r * Math.sin(theta) + R) * Math.cos(phi),
-					0];
-			case 2:
-				return [
-					Math.sin(theta) * Math.cos(phi),
-					Math.sin(theta) * Math.sin(phi),
-					Math.cos(theta)];
-			}
-		},
-		unitDiff : function(coord, dim) {
-			var theta = coord[0];
-			var phi = coord[1];
-			var r = this.constants.r;
-			var R = this.constants.R;
-			switch (dim) {
-			case 0:	//partial_theta
-				return [
-					Math.cos(theta) * Math.cos(phi),
-					Math.cos(theta) * Math.sin(phi),
-					-Math.sin(theta)];
-			case 1: //partial_phi
-				return [
-					-Math.sin(phi),
-					Math.cos(phi),
-					0];
-			case 2:
-				return [
-					Math.sin(theta) * Math.cos(phi),
-					Math.sin(theta) * Math.sin(phi),
-					Math.cos(theta)];
-			}		
-		},
-		/*
-		g_theta_theta = r^2
-		g_phi_phi = (r sin(theta) + R)^2
-		g_phi_phi,theta = 2 r (r sin(theta) + R) cos(theta)
-		conn_phi_theta_phi = conn_phi_phi_theta = 1/2 g_phi_phi,theta = r (r sin(theta) + R) cos(theta)
-		conn_theta_phi_phi = -r (r sin(theta) + R) cos(theta)
-		conn^phi_theta_phi = conn^phi_phi_theta = r cos(theta) / (r sin(theta) + R)
-		conn^theta_phi_phi = -(r sin(theta) + R) cos(theta) / r
-		*/
-		connection : function(coord,k,j) {
-			var theta = coord[0];
-			var phi = coord[1];
-			var r = this.constants.r;
-			var R = this.constants.R;		
-			var a = r * Math.cos(theta) / (r * Math.sin(theta) + R);
-			var b = -(r * Math.sin(theta) + R) * Math.cos(theta) / r;
-			return [
-				[
-					[0, 0],
-					[0, a]
-				],
-				[
-					[0, a],
-					[b, 0]
-				]
-			][k][k];
-		}
+		initialCoord : [0.26623666555845704, 1.8215957403167709],
+		initialDirection : [0, 1]
 	},
 	Paraboloid : {
-		initialCoord : [.25,.25],
-		initialDirection : [0,1],
 		coordinateMin : [1,1],
 		coordinateMax : [-1,-1],
 		parameters : ['u', 'v'],
 		equations : [
 			'u', 'v', '-u * u - v * v'
 		],
-		diff : function(coord, dim) {
-			var u = coord[0];
-			var v = coord[1];
-			return [
-				[1,0,-2*u],
-				[0,1,-2*v],
-				[2*u,2*v,1]
-			][dim];
-		},
-		unitDiff : function(coord, dim) {
-			var diff = this.diff(coord, dim);
-			var len = vec3.length(diff);
-			return [
-				diff[0] / len,
-				diff[1] / len,
-				diff[2] / len
-			];
-		},
-		/*
-		metric: g_uu = 1 + 4 * u^2, g_vv = 1 + 4 * v^2
-		partial: g_uu,u = 8 * u, g_vv,v = 8 * v
-		conn: conn_uuu = 4 * u, conn_vvv = 4 * v
-		2nd: conn^u_uu = 4 * u / (1 + 4 * u^2), conn^v_vv = 4 * v / (1 + 4 * v^2)
-		*/
-		connection : function(coord, k, j) {
-			var u = coord[0];
-			var v = coord[1];
-			return [
-				[
-					[4 * u / (1 + 4 * u * u), 0],
-					[0,0],
-				],
-				[
-					[0,0],
-					[0,4 * v / (1 + 4 * v * v)]
-				]
-			][k][j];
-		}
+		initialCoord : [.25,.25],
+		initialDirection : [0,1]
 	},
 	'Hyperbolic Paraboloid' : {
-		initialCoord : [.25,.25],
-		initialDirection : [0,1],
 		parameters : ['u', 'v'],
 		coordinateMin : [-1,-1],
 		coordinateMax : [1,1],
 		equations : [ 'u', 'v', 'u * u - v * v' ],
-		diff : function(coord, dim) {
-			var u = coord[0];
-			var v = coord[1];
-			return [
-				[1,0,2*u],
-				[0,1,-2*v],
-				[-2*u,2*v,1]
-			][dim];
-		},
-		unitDiff : function(coord, dim) {
-			var diff = this.diff(coord, dim);
-			var len = vec3.length(diff);
-			return [
-				diff[0] / len,
-				diff[1] / len,
-				diff[2] / len
-			];
-		},
-		/*
-		metric: g_uu = 1 + 4 * u^2, g_vv = 1 + 4 * v^2
-		partial: g_uu,u = 8 * u, g_vv,v = 8 * v
-		conn: conn_uuu = 4 * u, conn_vvv = 4 * v
-		2nd: conn^u_uu = 4 * u / (1 + 4 * u^2), conn^v_vv = 4 * v / (1 + 4 * v^2)
-		*/
-		connection : function(coord, k, j) {
-			var u = coord[0];
-			var v = coord[1];
-			return [
-				[
-					[4 * u / (1 + 4 * u * u), 0],
-					[0,0],
-				],
-				[
-					[0,0],
-					[0,4 * v / (1 + 4 * v * v)]
-				]
-			][k][j];
-		}
+		initialCoord : [.25,.25],
+		initialDirection : [0,1]
 	}
 };
 var currentCoordChart;
@@ -662,6 +392,8 @@ $(document).ready(function() {
 		
 	var coordLabels = ['x', 'y', 'z'];
 
+	var allInputs = coordLabels.map(function(x) { return 'equation'+x.toUpperCase(); }).concat(['parameters', 'constants']).map(function(id) { return $('#'+id); });
+	
 	//args: done: what to execute next
 	var updateEquations = function() {
 		var doUpdateEquations = function() {
@@ -679,7 +411,8 @@ $(document).ready(function() {
 			};
 			
 			//declare parameter variables
-			$.each($('#parameters').val().split(',').map(function(s) { return s.trim(); }), function(j,param) {
+			var parameters = $('#parameters').val().split(',').map(function(s) { return s.trim(); });
+			$.each(parameters, function(j,param) {
 				lua.executeAndPrint(param+" = Variable('"+param+"')");
 			});
 			
@@ -691,18 +424,14 @@ $(document).ready(function() {
 				lua.executeAndPrint(param+" = Constant("+value+")");
 			});		
 			
-			var coordCallbacks = [];
-			console.log('generating coordinate chart functions...');
-			//compile equations here
-			var failed = false;
-			$.each(coordLabels, function(i,x) {
-				//assignment
-				var eqn = $('#equation'+x.toUpperCase()).val();
-				console.log(x+' equation is '+eqn);
+			
+			var luaEqnToJSFunc = function(eqn, params) {
+				var failed = false;
+				//here I'm using output for errors
+				//since directing error doesn't work -- all errors result in stdout printing "ERROR attempt to call string" 
 				capture({
 					callback : function() {
-						Lua.execute("eqn = "+eqn);
-						//directing error doesn't work -- all errors result in stdout printing "ERROR attempt to call string" 
+						Lua.execute("eqn = simplify("+eqn+")");
 						Lua.execute("if type(eqn) == 'number' then eqn = Constant(eqn) end");
 					},
 					output : function(s) {
@@ -711,53 +440,185 @@ $(document).ready(function() {
 						failed = true;
 					}
 				});
-				if (failed) return true;	//'return true' means break in $.each	
-				
+				if (failed) throw 'Lua error!';	//'return true' means break in $.each	
+			
+				//here I'm using output for capturing the compiled lua code
+				// I'm recording errors if the captured code fails to compile in JavaScript
+				var resultFunction = undefined;
 				capture({
 					callback : function() {
-						var luaCmd = 
-							"print(eqn:compile{"
-							+$('#parameters').val()
-							+"})";
+						var luaCmd = "print(eqn:compile{"+params+"})";
 						console.log('executing lua '+luaCmd);
 						//print commands are going to the old output ...
 						Lua.execute(luaCmd);
 					},
 					output : function(s) {
 						console.log('got Lua output '+s);
-						var jsCmd = 'generatedCoordMap = function('
-							+$('#parameters').val()
-							+') { return '
-							+s.replace(/math/g, 'Math')
-							+'; }';
+						var jsCmd = 'var tmp = function('+params+') { return '+s.replace(/math/g, 'Math')+'; }; tmp;';
 						console.log(jsCmd);
 						try {
-							eval(jsCmd);
-							coordCallbacks[i] = window.generatedCoordMap;
+							resultFunction = eval(jsCmd);
 						} catch (e) {
 							failed = true;
 						}
 					}
 				});
-				if (failed) return true;
-			});
+				if (failed) throw 'Lua error!';
+
+				return resultFunction;
+			};
+
+			//compile equations here
+			var coordCallbacks = [];	//coordCallbacks[xyz]
+			var coordDerivs = [];		//coordDerivs[xyz][uv|normal]
+			var metric = [];			//metric[uv][uv] = g_ij = e_i dot e_j
+			var invMetric = [];			//invMetric[uv][uv] = g^ij
+			var diffMetric = [];		//diffMetric[uv][uv][uv] = g_ij,k
+			var conn1st = [];			//conn1st[uv][uv][uv] = conn_ijk = 1/2 (g_ij,k + g_ik,j - g_jk,i)
+			var conn2nd = [];			//conn2nd[uv][uv][uv] = conn^i_jk = g^il * conn_ljk
+			console.log('generating coordinate chart functions...');
+			var failed = false;
+			var equations = [];
+			for (var i = 0; i < coordLabels.length; ++i) {
+				equations[i] = $('#equation'+coordLabels[i].toUpperCase()).val();
+			}
+			try {
+				//get functions
+				$.each(equations, function(i,eqn) {
+					coordCallbacks[i] = luaEqnToJSFunc(eqn, parameters.join(', '));
+					coordDerivs[i] = [];
+					$.each(parameters, function(j,param) {
+						coordDerivs[i][j] = luaEqnToJSFunc('diff('+eqn+', '+param+')', parameters.join(', '));
+					});
+				});
+
+				//get metric and its derivative 
+				$.each(parameters, function(i,u) {
+					metric[i] = [];
+					diffMetric[i] = [];
+					$.each(parameters, function(j,v) {
+						var sum = [];
+						$.each(equations, function(k,eqn) {
+							sum.push('diff('+eqn+', '+u+') * diff('+eqn+', '+v+')');
+						});
+						var eqn = sum.join(' + ');
+						metric[i][j] = luaEqnToJSFunc(eqn, parameters.join(', '));
+						diffMetric[i][j] = [];
+						$.each(parameters, function(k,w) {
+							var diffeqn = 'diff('+eqn+', '+w+')';
+							console.log(diffeqn);
+							diffMetric[i][j][k] = luaEqnToJSFunc(diffeqn, parameters.join(', '));
+						});
+					});
+				});
+
+				//inverse metric
+				var metricDet = function() {
+					return metric[0][0].apply(undefined, arguments)
+						* metric[1][1].apply(undefined, arguments)
+						- metric[1][0].apply(undefined, arguments)
+						* metric[0][1].apply(undefined, arguments);
+				};
+				invMetric = [
+					[	//00
+						function() { return metric[1][1].apply(undefined, arguments) / metricDet.apply(undefined, arguments); },
+						//01
+						function() { return -metric[0][1].apply(undefined, arguments) / metricDet.apply(undefined, arguments); }
+					],
+					[	//10
+						function() { return -metric[1][0].apply(undefined, arguments) / metricDet.apply(undefined, arguments); },
+						//11
+						function() { return metric[0][0].apply(undefined, arguments) / metricDet.apply(undefined, arguments); }
+					]
+				];
+	
+				//1st conns
+				$.each(parameters, function(i,u) {
+					conn1st[i] = [];
+					$.each(parameters, function(j,v) {
+						conn1st[i][j] = [];
+						$.each(parameters, function(k,w) {
+							conn1st[i][j][k] = function() {
+								return .5 * (
+									diffMetric[i][j][k].apply(undefined, arguments) 
+									+ diffMetric[i][k][j].apply(undefined, arguments) 
+									- diffMetric[j][k][i].apply(undefined, arguments));
+							};
+						});
+					});
+				});
+
+				//2nd conns
+				$.each(parameters, function(i,u) {
+					conn2nd[i] = [];
+					$.each(parameters, function(j,v) {
+						conn2nd[i][j] = [];
+						$.each(parameters, function(k,w) {
+							conn2nd[i][j][k] = function() {
+								var sum = 0;
+								for (var l = 0; l < parameters.length; ++l) {
+									sum += invMetric[i][l].apply(undefined, arguments) * conn1st[l][j][k].apply(undefined, arguments);
+								}
+								return sum;
+							}
+						});
+					});
+				});
+				
+				//get normal
+				$.each(equations, function(i,eqn) {
+					var j = (i+1)%equations.length;
+					var k = (j+1)%equations.length;
+					var dj_du = coordDerivs[j][0];
+					var dk_du = coordDerivs[k][0];
+					var dj_dv = coordDerivs[j][1];
+					var dk_dv = coordDerivs[k][1];
+					coordDerivs[i][2] = function() { 
+						return dj_du.apply(undefined, arguments) 
+							* dk_dv.apply(undefined, arguments) 
+							- dk_du.apply(undefined,arguments) 
+							* dj_dv.apply(undefined,arguments);
+					};
+				});
+			} catch (e) {
+				failed = true;
+			}
 			if (failed) {
 				//color the failed input textarea red
-				$.each(coordLabels, function(i,x) {
-					$('#equation'+x.toUpperCase()).css({background:'rgb(255,127,127)'});
+				$.each(allInputs, function(i,input) {
+					input.css({background:'rgb(255,127,127)'});
 				});
 				return;
 			} else {
-				$.each(coordLabels, function(i,x) {
-					$('#equation'+x.toUpperCase()).css({background:'white'});
+				$.each(allInputs, function(i,input) {
+					input.css({background:'white'});
 				});
 			}
 			currentCoordChart.mapping = function(coord) {
-				var mappedCoord = [];
+				var result = [];
 				for (var k = 0; k < coordLabels.length; ++k) {
-					mappedCoord[k] = coordCallbacks[k].apply(undefined, coord);
+					result[k] = coordCallbacks[k].apply(undefined, coord);
 				}
-				return mappedCoord;
+				return result;
+			};
+			currentCoordChart.diff = function(coord, dim) {
+				var result = [];
+				for (var k = 0; k < coordLabels.length; ++k) {
+					result[k] = coordDerivs[k][dim].apply(undefined, coord);
+				}
+				return result;
+			};
+			currentCoordChart.unitDiff = function(coord, dim) {
+				var diff = this.diff(coord, dim);
+				var len = vec3.length(diff);
+				return [diff[0] / len, diff[1] / len, diff[2] / len];
+			};
+			currentCoordChart.connection = function(coord, k, j) {
+				var result = [];
+				for (var i = 0; i < parameters.length; ++i) {
+					result[i] = conn2nd[i][j][k].apply(undefined, coord);
+				}
+				return result;
 			};
 			reset();	//regenerate mesh
 		};
@@ -771,9 +632,8 @@ $(document).ready(function() {
 		
 	};
 
-	var allInputs = coordLabels.map(function(x) { return 'equation'+x.toUpperCase(); }).concat(['parameters', 'constants']);
 	$.each(allInputs, function(i,input) {
-		$('#'+input)
+		input
 			.on('change', updateEquations)
 			.on('keypress', updateEquations)
 			.on('paste', updateEquations)
