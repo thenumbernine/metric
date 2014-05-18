@@ -95,7 +95,7 @@ var coordCharts = {
 		equations : [
 			'(r * sin(theta) + R) * cos(phi)',
 			'(r * sin(theta) + R) * sin(phi)',
-			'r *cos(theta)'
+			'r * cos(theta)'
 		],
 		initialCoord : [0.26623666555845704, 1.8215957403167709],
 		initialDirection : [0, 1]
@@ -383,7 +383,6 @@ $(document).ready(function() {
 			console.log('loaded lua');
 			Lua.execute("package.path = package.path .. ';./?/init.lua'");
 			this.executeAndPrint("require 'symmath'");
-			this.executeAndPrint("symmath.usePowerSymbol = false");
 			this.executeAndPrint("for k,v in pairs(symmath) do _G[k] = v end");
 			luaDoneLoading = true;
 		},
@@ -447,15 +446,13 @@ $(document).ready(function() {
 				var resultFunction = undefined;
 				capture({
 					callback : function() {
-						var luaCmd = "print(eqn:compile{"+params+"})";
+						var luaCmd = "print(symmath.ToJavaScriptCode:compile(eqn, {"+params+"}))";
 						console.log('executing lua '+luaCmd);
 						//print commands are going to the old output ...
 						Lua.execute(luaCmd);
 					},
-					output : function(s) {
-						console.log('got Lua output '+s);
-						var jsCmd = 'var tmp = function('+params+') { return '+s.replace(/math/g, 'Math')+'; }; tmp;';
-						console.log(jsCmd);
+					output : function(jsCmd) {
+						console.log('got JS output '+jsCmd);
 						try {
 							resultFunction = eval(jsCmd);
 						} catch (e) {
