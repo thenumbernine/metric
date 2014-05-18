@@ -18,6 +18,7 @@ function resize() {
 		- parseInt(info.css('padding-top'))
 		- parseInt(info.css('padding-bottom'));
 	info.height(height - 32);
+	$('#panel').height(height - 16);
 }
 
 function update() {
@@ -423,8 +424,9 @@ $(document).ready(function() {
 				lua.executeAndPrint(param+" = Constant("+value+")");
 			});		
 			
+			var propertiesHTML = '';
 			
-			var luaEqnToJSFunc = function(eqn, params) {
+			var luaEqnToJSFunc = function(eqn, params, texLabel) {
 				var failed = false;
 				//here I'm using output for errors
 				//since directing error doesn't work -- all errors result in stdout printing "ERROR attempt to call string" 
@@ -462,6 +464,20 @@ $(document).ready(function() {
 				});
 				if (failed) throw 'Lua error!';
 
+				//while we're here, let's store the LaTex generated from the equations ...
+				capture({
+					callback : function() {
+						var luaCmd = "print(symmath.ToLaTeX(eqn))"
+						console.log('executing lua '+luaCmd);
+						Lua.execute(luaCmd);
+					},
+					output : function(TeX) {
+						console.log('got TeX output '+TeX);
+						if (texLabel !== undefined) TeX = texLabel + ' = ' + TeX;
+						propertiesHTML += '\\( ' + TeX + ' \\)<br>\n';
+					}
+				});
+
 				return resultFunction;
 			};
 
@@ -484,10 +500,12 @@ $(document).ready(function() {
 			try {
 				//get functions
 				$.each(equations, function(i,eqn) {
-					coordCallbacks[i] = luaEqnToJSFunc(eqn, parameters.join(', '));
+					coordCallbacks[i] = luaEqnToJSFunc(eqn, parameters.join(', '), coordLabels[i]);
 					coordDerivs[i] = [];
+				});
+				$.each(equations, function(i,eqn) {
 					$.each(parameters, function(j,param) {
-						coordDerivs[i][j] = luaEqnToJSFunc('diff('+eqn+', '+param+')', parameters.join(', '));
+						coordDerivs[i][j] = luaEqnToJSFunc('diff('+eqn+', '+param+')', parameters.join(', '), '{{d'+coordLabels[i]+'} \\over {d'+param+'}}');
 					});
 				});
 
@@ -502,7 +520,7 @@ $(document).ready(function() {
 							sum.push('diff('+eqn+', '+u+') * diff('+eqn+', '+v+')');
 						});
 						metricEqn[i][j] = sum.join(' + ');
-						metric[i][j] = luaEqnToJSFunc(metricEqn[i][j], parameters.join(', '));
+						metric[i][j] = luaEqnToJSFunc(metricEqn[i][j], parameters.join(', '), 'g_{'+u+v+'}');
 						diffMetricEqn[i][j] = [];
 						$.each(parameters, function(k,w) {
 							diffMetricEqn[i][j][k] = 'diff('+metricEqn[i][j]+', '+w+')';
@@ -544,7 +562,7 @@ $(document).ready(function() {
 								sum.push('('+invMetricEqn[i][l]+') * ('+conn1stEqn[l][j][k]+')');
 							}
 							conn2ndEqn[i][j][k] = sum.join(' + ');
-							conn2nd[i][j][k] = luaEqnToJSFunc(conn2ndEqn[i][j][k], parameters.join(', '));
+							conn2nd[i][j][k] = luaEqnToJSFunc(conn2ndEqn[i][j][k], parameters.join(', '), '{Gamma^'+u+'}_{'+v+w+'}');
 						});
 					});
 				});
@@ -604,6 +622,15 @@ $(document).ready(function() {
 				}
 				return result;
 			};
+			
+			//process TeX
+			var symbols = ['theta', 'phi', 'rho', 'gamma', 'Gamma'];
+			$.each(symbols, function(i,sym) {
+				propertiesHTML = propertiesHTML.replace(new RegExp(sym, 'g'), '\\'+sym);
+			});
+			$('#properties').html(propertiesHTML);
+			MathJax.Hub.Queue(["Typeset", MathJax.Hub, "properties"]);
+			
 			reset();	//regenerate mesh
 		};
 		//wait for done lua loading
