@@ -323,22 +323,12 @@ var findClickedCoord;
 
 $(document).ready(function() {
 	$('#panelButton').click(function() {
-		var panel = $('#panel');	
-		if (panel.css('display') == 'none') {
-			panel.show();
-			$('#info').hide();
-		} else {
-			panel.hide();
-		}
+		$('#panel').show();	
+		$('#info').hide();
 	});
 	$('#infoButton').click(function() {
-		var info = $('#info');
-		if (info.css('display') == 'none') {
-			info.show();
-			$('#panel').hide();
-		} else {
-			info.hide();
-		}
+		$('#info').show();
+		$('#panel').hide();
 	});
 	
 	canvas = $('<canvas>', {
