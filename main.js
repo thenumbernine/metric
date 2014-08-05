@@ -1,5 +1,6 @@
 var canvas;
 var gl;
+var renderer;
 var mouse;
 var sceneObj;
 var meshObj;
@@ -7,7 +8,7 @@ var meshObj;
 function resize() {
 	canvas.width = window.innerWidth;
 	canvas.height = window.innerHeight;
-	GL.resize();
+	renderer.resize();
 
 	var info = $('#info');
 	var width = window.innerWidth 
@@ -23,7 +24,7 @@ function resize() {
 
 function update() {
 	//update
-	GL.draw();
+	renderer.draw();
 	requestAnimFrame(update);
 };
 
@@ -272,13 +273,13 @@ var findClickedCoord;
 	var tmp2 = vec3.create();
 	findClickedCoord = function() {
 		var mouseDir = vec3.create();
-		GL.mouseDir(mouseDir, mouse.xf, mouse.yf);
+		renderer.mouseDir(mouseDir, mouse.xf, mouse.yf);
 		vec3.normalize(mouseDir, mouseDir);
 		//ray intersection test with coordinate chart ...
 		// for now just search for closest point in geometry?
 		var bestDist = undefined;
 		var bestCoord = undefined;
-		vec3.quatZAxis(tmp2, GL.view.angle);
+		vec3.quatZAxis(tmp2, renderer.view.angle);
 		var considered = 0;
 		var pt = vec3.create();
 		for (var i = 0; i < meshObj.attrs.vertex.data.length/3; ++i) {
@@ -299,13 +300,13 @@ var findClickedCoord;
 
 			
 			//make sure we're on the right side of the view plane
-			vec3.sub(tmp, pt, GL.view.pos);
+			vec3.sub(tmp, pt, renderer.view.pos);
 			if (vec3.dot(tmp, tmp2) > 0) continue;	//fwd dot delta > 0 means we're good, so -fwd dot delta < 0 means we're good, so -fwd dot delta > 0 means we're bad
 		
 			considered++;
 
 			//ray/point distance from view pos / mouse line
-			vec3.sub(tmp, pt, GL.view.pos);
+			vec3.sub(tmp, pt, renderer.view.pos);
 			vec3.cross(tmp, tmp, mouseDir);
 			var dist = vec3.length(tmp);
 			
@@ -341,7 +342,8 @@ $(document).ready(function() {
 	$(canvas).disableSelection()
 
 	try {
-		gl = GL.init(canvas);
+		renderer = new GL.CanvasRenderer({canvas:canvas});
+		gl = renderer.gl;
 	} catch (e) {
 		$(canvas).remove();
 		$('#webglfail').show();
@@ -367,7 +369,6 @@ $(document).ready(function() {
 	console.log('loading lua');
 	var luaDoneLoading = false;
 	var lua = new EmbeddedLuaInterpreter({
-		id : 'lua-vm-container',
 		packages : ['ext', 'symmath'],
 		packageTests : ['symmath'],
 		done : function() {
@@ -710,7 +711,7 @@ $(document).ready(function() {
 						mappedClickedCoord[2] - mappedCurrentCoord[2]
 					];
 					var invAngle = quat.create();
-					quat.conjugate(invAngle, GL.view.angle);
+					quat.conjugate(invAngle, renderer.view.angle);
 					vec3.transformQuat(delta, delta, invAngle);
 					var basis0 = currentCoordChart.unitDiff(currentCoord, 0);
 					var basis1 = currentCoordChart.unitDiff(currentCoord, 1);
@@ -722,7 +723,7 @@ $(document).ready(function() {
 			}
 		},
 		zoom : function(dz) {
-			GL.view.pos[2] += .0001 * dz;
+			renderer.view.pos[2] += .0001 * dz;
 		}
 	});
 
@@ -738,9 +739,9 @@ $(document).ready(function() {
 		}
 	}
 
-	GL.view.pos[2] = 2;
-	GL.view.zFar = 100;
-	GL.view.zNear = .1;
+	renderer.view.pos[2] = 2;
+	renderer.view.zFar = 100;
+	renderer.view.zNear = .1;
 	var plainShader = new GL.ShaderProgram({
 		vertexPrecision : 'best',
 		vertexCode : mlstr(function(){/*
