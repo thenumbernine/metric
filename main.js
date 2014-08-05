@@ -343,7 +343,7 @@ $(document).ready(function() {
 
 	try {
 		renderer = new GL.CanvasRenderer({canvas:canvas});
-		gl = renderer.gl;
+		gl = renderer.context;
 	} catch (e) {
 		$(canvas).remove();
 		$('#webglfail').show();
@@ -743,6 +743,7 @@ $(document).ready(function() {
 	renderer.view.zFar = 100;
 	renderer.view.zNear = .1;
 	var plainShader = new GL.ShaderProgram({
+		context : gl,
 		vertexPrecision : 'best',
 		vertexCode : mlstr(function(){/*
 attribute vec3 vertex;
@@ -761,6 +762,7 @@ void main() {
 */})
 	});
 	var meshShader = new GL.ShaderProgram({
+		context : gl,
 		vertexPrecision : 'best',
 		vertexCode : mlstr(function(){/*
 attribute vec3 vertex;
@@ -802,36 +804,41 @@ void main() {
 */})
 	});
 	sceneObj = new GL.SceneObject({
+		context : gl,
+		scene : renderer.scene,
 		static : false
 	});
 
 	meshObj = new GL.SceneObject({
+		context : gl,
+		scene : renderer.scene,
 		parent : sceneObj,
 		mode : gl.TRIANGLES,
 		attrs : {
 			vertex : new GL.ArrayBuffer({
+				context : gl,
 				count : intDivs[0] * intDivs[1],
-				usgae : gl.DYNAMIC_DRAW,
-				keep : true
+				usgae : gl.DYNAMIC_DRAW
 			}),
 			coord : new GL.ArrayBuffer({
+				context : gl,
 				dim : 2,
-				count : intDivs[0] * intDivs[1],
-				keep : true
+				count : intDivs[0] * intDivs[1]
 			}),
 			intCoord : new GL.ArrayBuffer({
+				context : gl,
 				dim : 2,
 				count : intDivs[0] * intDivs[1],
-				usage : gl.DYNAMIC_DRAW,
-				keep : true
+				usage : gl.DYNAMIC_DRAW
 			}),
 			normal : new GL.ArrayBuffer({
+				context : gl,
 				count : intDivs[0] * intDivs[1],
-				usage : gl.DYNAMIC_DRAW,
-				keep : true
+				usage : gl.DYNAMIC_DRAW
 			})
 		},
 		indexes : new GL.ElementArrayBuffer({
+			context : gl,
 			data : new Uint16Array(indexes)
 		}),
 		uniforms : {
@@ -842,13 +849,15 @@ void main() {
 	});
 	
 	selectionObj = new GL.SceneObject({
+		context : gl,
+		scene : renderer.scene,
 		parent : sceneObj,
 		mode : gl.LINE_LOOP,
 		attrs : {
 			vertex : new GL.ArrayBuffer({
+				context : gl,
 				usage : gl.DYNAMIC_DRAW,
-				count : selectionRes,
-				keep : true
+				count : selectionRes
 			})
 		},
 		uniforms : {
@@ -874,13 +883,15 @@ void main() {
 	];
 	for (var i = 0; i < 2; ++i) {
 		basisObjs[i] = new GL.SceneObject({
+			context : gl,
+			scene : renderer.scene,
 			parent : sceneObj,
 			mode : gl.LINES,
 			attrs : {
 				vertex : new GL.ArrayBuffer({
+					context : gl,
 					count : 2,
-					usage : gl.DYNAMIC_DRAW,
-					keep : true
+					usage : gl.DYNAMIC_DRAW
 				})
 			},
 			uniforms : {
@@ -893,13 +904,15 @@ void main() {
 		connObjs[i] = [];
 		for (var j = 0; j < 2; ++j) {
 			connObjs[i][j] = new GL.SceneObject({
+				context : gl,
+				scene : renderer.scene,
 				parent : sceneObj,
 				mode : gl.LINES,
 				attrs : {
 					vertex : new GL.ArrayBuffer({
+						context : gl,
 						count : 2,
-						usage : gl.DYNAMIC_DRAW,
-						keep : true
+						usage : gl.DYNAMIC_DRAW
 					})
 				},
 				uniforms : {
@@ -913,13 +926,15 @@ void main() {
 	}
 
 	partialPathObj = new GL.SceneObject({
+		context : gl,
+		scene : renderer.scene,
 		parent : sceneObj,
 		mode : gl.LINE_STRIP,
 		attrs : {
 			vertex : new GL.ArrayBuffer({
+				context : gl,
 				count : pathLength,
-				usage : gl.DYNAMIC_DRAW,
-				keep : true
+				usage : gl.DYNAMIC_DRAW
 			})
 		},
 		uniforms : {
@@ -929,13 +944,15 @@ void main() {
 		static : false
 	});
 	geodesicPathObj = new GL.SceneObject({
+		context : gl,
+		scene : renderer.scene,
 		parent : sceneObj,
 		mode : gl.LINE_STRIP,
 		attrs : {
 			vertex : new GL.ArrayBuffer({
+				context : gl,
 				count : pathLength,
-				usage : gl.DYNAMIC_DRAW,
-				keep : true
+				usage : gl.DYNAMIC_DRAW
 			})
 		},
 		uniforms : {
