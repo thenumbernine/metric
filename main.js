@@ -1,6 +1,6 @@
 var canvas;
 var gl;
-var renderer;
+var glutil;
 var mouse;
 var sceneObj;
 var meshObj;
@@ -8,7 +8,7 @@ var meshObj;
 function resize() {
 	canvas.width = window.innerWidth;
 	canvas.height = window.innerHeight;
-	renderer.resize();
+	glutil.resize();
 
 	var info = $('#info');
 	var width = window.innerWidth 
@@ -24,7 +24,7 @@ function resize() {
 
 function update() {
 	//update
-	renderer.draw();
+	glutil.draw();
 	requestAnimFrame(update);
 };
 
@@ -273,13 +273,13 @@ var findClickedCoord;
 	var tmp2 = vec3.create();
 	findClickedCoord = function() {
 		var mouseDir = vec3.create();
-		renderer.mouseDir(mouseDir, mouse.xf, mouse.yf);
+		glutil.mouseDir(mouseDir, mouse.xf, mouse.yf);
 		vec3.normalize(mouseDir, mouseDir);
 		//ray intersection test with coordinate chart ...
 		// for now just search for closest point in geometry?
 		var bestDist = undefined;
 		var bestCoord = undefined;
-		vec3.quatZAxis(tmp2, renderer.view.angle);
+		vec3.quatZAxis(tmp2, glutil.view.angle);
 		var considered = 0;
 		var pt = vec3.create();
 		for (var i = 0; i < meshObj.attrs.vertex.data.length/3; ++i) {
@@ -300,13 +300,13 @@ var findClickedCoord;
 
 			
 			//make sure we're on the right side of the view plane
-			vec3.sub(tmp, pt, renderer.view.pos);
+			vec3.sub(tmp, pt, glutil.view.pos);
 			if (vec3.dot(tmp, tmp2) > 0) continue;	//fwd dot delta > 0 means we're good, so -fwd dot delta < 0 means we're good, so -fwd dot delta > 0 means we're bad
 		
 			considered++;
 
 			//ray/point distance from view pos / mouse line
-			vec3.sub(tmp, pt, renderer.view.pos);
+			vec3.sub(tmp, pt, glutil.view.pos);
 			vec3.cross(tmp, tmp, mouseDir);
 			var dist = vec3.length(tmp);
 			
@@ -342,8 +342,8 @@ $(document).ready(function() {
 	$(canvas).disableSelection()
 
 	try {
-		renderer = new GL.CanvasRenderer({canvas:canvas});
-		gl = renderer.context;
+		glutil = new GLUtil({canvas:canvas});
+		gl = glutil.context;
 	} catch (e) {
 		$(canvas).remove();
 		$('#webglfail').show();
@@ -711,7 +711,7 @@ $(document).ready(function() {
 						mappedClickedCoord[2] - mappedCurrentCoord[2]
 					];
 					var invAngle = quat.create();
-					quat.conjugate(invAngle, renderer.view.angle);
+					quat.conjugate(invAngle, glutil.view.angle);
 					vec3.transformQuat(delta, delta, invAngle);
 					var basis0 = currentCoordChart.unitDiff(currentCoord, 0);
 					var basis1 = currentCoordChart.unitDiff(currentCoord, 1);
@@ -723,7 +723,7 @@ $(document).ready(function() {
 			}
 		},
 		zoom : function(dz) {
-			renderer.view.pos[2] += .0001 * dz;
+			glutil.view.pos[2] += .0001 * dz;
 		}
 	});
 
@@ -739,11 +739,10 @@ $(document).ready(function() {
 		}
 	}
 
-	renderer.view.pos[2] = 2;
-	renderer.view.zFar = 100;
-	renderer.view.zNear = .1;
-	var plainShader = new GL.ShaderProgram({
-		context : gl,
+	glutil.view.pos[2] = 2;
+	glutil.view.zFar = 100;
+	glutil.view.zNear = .1;
+	var plainShader = new glutil.ShaderProgram({
 		vertexPrecision : 'best',
 		vertexCode : mlstr(function(){/*
 attribute vec3 vertex;
@@ -761,8 +760,7 @@ void main() {
 }
 */})
 	});
-	var meshShader = new GL.ShaderProgram({
-		context : gl,
+	var meshShader = new glutil.ShaderProgram({
 		vertexPrecision : 'best',
 		vertexCode : mlstr(function(){/*
 attribute vec3 vertex;
@@ -803,42 +801,33 @@ void main() {
 }
 */})
 	});
-	sceneObj = new GL.SceneObject({
-		context : gl,
-		scene : renderer.scene,
+	sceneObj = new glutil.SceneObject({
 		static : false
 	});
 
-	meshObj = new GL.SceneObject({
-		context : gl,
-		scene : renderer.scene,
+	meshObj = new glutil.SceneObject({
 		parent : sceneObj,
 		mode : gl.TRIANGLES,
 		attrs : {
-			vertex : new GL.ArrayBuffer({
-				context : gl,
+			vertex : new glutil.ArrayBuffer({
 				count : intDivs[0] * intDivs[1],
 				usgae : gl.DYNAMIC_DRAW
 			}),
-			coord : new GL.ArrayBuffer({
-				context : gl,
+			coord : new glutil.ArrayBuffer({
 				dim : 2,
 				count : intDivs[0] * intDivs[1]
 			}),
-			intCoord : new GL.ArrayBuffer({
-				context : gl,
+			intCoord : new glutil.ArrayBuffer({
 				dim : 2,
 				count : intDivs[0] * intDivs[1],
 				usage : gl.DYNAMIC_DRAW
 			}),
-			normal : new GL.ArrayBuffer({
-				context : gl,
+			normal : new glutil.ArrayBuffer({
 				count : intDivs[0] * intDivs[1],
 				usage : gl.DYNAMIC_DRAW
 			})
 		},
-		indexes : new GL.ElementArrayBuffer({
-			context : gl,
+		indexes : new glutil.ElementArrayBuffer({
 			data : new Uint16Array(indexes)
 		}),
 		uniforms : {
@@ -848,14 +837,11 @@ void main() {
 		static : false
 	});
 	
-	selectionObj = new GL.SceneObject({
-		context : gl,
-		scene : renderer.scene,
+	selectionObj = new glutil.SceneObject({
 		parent : sceneObj,
 		mode : gl.LINE_LOOP,
 		attrs : {
-			vertex : new GL.ArrayBuffer({
-				context : gl,
+			vertex : new glutil.ArrayBuffer({
 				usage : gl.DYNAMIC_DRAW,
 				count : selectionRes
 			})
@@ -882,14 +868,11 @@ void main() {
 		]
 	];
 	for (var i = 0; i < 2; ++i) {
-		basisObjs[i] = new GL.SceneObject({
-			context : gl,
-			scene : renderer.scene,
+		basisObjs[i] = new glutil.SceneObject({
 			parent : sceneObj,
 			mode : gl.LINES,
 			attrs : {
-				vertex : new GL.ArrayBuffer({
-					context : gl,
+				vertex : new glutil.ArrayBuffer({
 					count : 2,
 					usage : gl.DYNAMIC_DRAW
 				})
@@ -903,14 +886,11 @@ void main() {
 		/*
 		connObjs[i] = [];
 		for (var j = 0; j < 2; ++j) {
-			connObjs[i][j] = new GL.SceneObject({
-				context : gl,
-				scene : renderer.scene,
+			connObjs[i][j] = new glutil.SceneObject({
 				parent : sceneObj,
 				mode : gl.LINES,
 				attrs : {
-					vertex : new GL.ArrayBuffer({
-						context : gl,
+					vertex : new glutil.ArrayBuffer({
 						count : 2,
 						usage : gl.DYNAMIC_DRAW
 					})
@@ -925,14 +905,11 @@ void main() {
 		*/
 	}
 
-	partialPathObj = new GL.SceneObject({
-		context : gl,
-		scene : renderer.scene,
+	partialPathObj = new glutil.SceneObject({
 		parent : sceneObj,
 		mode : gl.LINE_STRIP,
 		attrs : {
-			vertex : new GL.ArrayBuffer({
-				context : gl,
+			vertex : new glutil.ArrayBuffer({
 				count : pathLength,
 				usage : gl.DYNAMIC_DRAW
 			})
@@ -943,14 +920,11 @@ void main() {
 		shader : plainShader,
 		static : false
 	});
-	geodesicPathObj = new GL.SceneObject({
-		context : gl,
-		scene : renderer.scene,
+	geodesicPathObj = new glutil.SceneObject({
 		parent : sceneObj,
 		mode : gl.LINE_STRIP,
 		attrs : {
-			vertex : new GL.ArrayBuffer({
-				context : gl,
+			vertex : new glutil.ArrayBuffer({
 				count : pathLength,
 				usage : gl.DYNAMIC_DRAW
 			})
