@@ -374,7 +374,7 @@ $(document).ready(function() {
 		done : function() {
 			console.log('loaded lua');
 			Lua.execute("package.path = package.path .. ';./?/init.lua'");
-			this.executeAndPrint("require 'symmath'");
+			this.executeAndPrint("symmath = require 'symmath'");
 			this.executeAndPrint("for k,v in pairs(symmath) do _G[k] = v end");
 			luaDoneLoading = true;
 		},
@@ -439,7 +439,7 @@ $(document).ready(function() {
 				var resultFunction = undefined;
 				capture({
 					callback : function() {
-						var luaCmd = "print(symmath.ToJavaScriptCode:compile(eqn, {"+params+"}))";
+						var luaCmd = "print((require 'symmath.tostring.JavaScript'):compile(eqn, {"+params+"}))";
 						console.log('executing lua '+luaCmd);
 						//print commands are going to the old output ...
 						Lua.execute(luaCmd);
@@ -458,7 +458,7 @@ $(document).ready(function() {
 				//while we're here, let's store the LaTex generated from the equations ...
 				capture({
 					callback : function() {
-						var luaCmd = "print(symmath.ToLaTeX(eqn))"
+						var luaCmd = "print((require 'symmath.tostring.LaTeX')(eqn))"
 						console.log('executing lua '+luaCmd);
 						Lua.execute(luaCmd);
 					},
