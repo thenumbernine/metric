@@ -380,7 +380,7 @@ $(document).ready(function() {
 		},
 		autoLaunch : true
 	});
-		
+
 	var coordLabels = ['x', 'y', 'z'];
 
 	var allInputs = coordLabels.map(function(x) { return 'equation'+x.toUpperCase(); }).concat(['parameters', 'constants']).map(function(id) { return $('#'+id); });
@@ -634,12 +634,26 @@ $(document).ready(function() {
 		
 	};
 
+	var delayToUpdateEquations = undefined;
+	(function(){
+		var updateInterval = undefined;
+		delayToUpdateEquations = function() {
+			if (updateInterval !== undefiend) {
+				clearInterval(updateInterval);
+			}
+			updateInterval = setInterval(function() {
+				updateEquations();
+			}, 1000);
+		};
+	})();
+
 	$.each(allInputs, function(i,input) {
 		input
-			.on('change', updateEquations)
-			.on('keypress', updateEquations)
-			.on('paste', updateEquations)
-			.on('input', updateEquations);
+			.on('change', delayToUpdateEquations)
+			.on('keypress', delayToUpdateEquations)
+			.on('paste', delayToUpdateEquations)
+			.on('input', delayToUpdateEquations)
+		;
 	});
 
 	$.each(coordCharts, function(name,coordChart) {
