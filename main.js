@@ -638,7 +638,7 @@ $(document).ready(function() {
 	(function(){
 		var updateInterval = undefined;
 		delayToUpdateEquations = function() {
-			if (updateInterval !== undefiend) {
+			if (updateInterval !== undefined) {
 				clearInterval(updateInterval);
 			}
 			updateInterval = setInterval(function() {
