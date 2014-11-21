@@ -511,7 +511,7 @@ $(document).ready(function() {
 							sum.push('diff('+eqn+', '+u+') * diff('+eqn+', '+v+')');
 						});
 						metricEqn[i][j] = sum.join(' + ');
-						metric[i][j] = luaEqnToJSFunc(metricEqn[i][j], parameters.join(', '), 'g_{'+u+v+'}');
+						metric[i][j] = luaEqnToJSFunc(metricEqn[i][j], parameters.join(', '), 'g_{'+u+' '+v+'}');
 						diffMetricEqn[i][j] = [];
 						$.each(parameters, function(k,w) {
 							diffMetricEqn[i][j][k] = 'diff('+metricEqn[i][j]+', '+w+')';
@@ -553,7 +553,7 @@ $(document).ready(function() {
 								sum.push('('+invMetricEqn[i][l]+') * ('+conn1stEqn[l][j][k]+')');
 							}
 							conn2ndEqn[i][j][k] = sum.join(' + ');
-							conn2nd[i][j][k] = luaEqnToJSFunc(conn2ndEqn[i][j][k], parameters.join(', '), '{Gamma^'+u+'}_{'+v+w+'}');
+							conn2nd[i][j][k] = luaEqnToJSFunc(conn2ndEqn[i][j][k], parameters.join(', '), '{Gamma^'+u+'}_{'+v+' '+w+'}');
 						});
 					});
 				});
@@ -641,7 +641,7 @@ $(document).ready(function() {
 			if (updateInterval !== undefined) {
 				clearInterval(updateInterval);
 			}
-			updateInterval = setInterval(function() {
+			updateInterval = setTimeout(function() {
 				updateEquations();
 			}, 1000);
 		};
