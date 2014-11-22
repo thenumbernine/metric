@@ -375,12 +375,18 @@ $(document).ready(function() {
 			console.log('loaded lua');
 			Lua.execute("package.path = package.path .. ';./?/init.lua'");
 			this.executeAndPrint("symmath = require 'symmath'");
-			this.executeAndPrint("for k,v in pairs(symmath) do _G[k] = v end");
+			this.executeAndPrint(mlstr(function(){/*
+for k,v in pairs(symmath) do
+	if not _G[k] then 	-- only merge into global if it's not already defined (I'm thinking of you, tostring)
+		_G[k] = v 
+	end
+end
+			*/}));
 			luaDoneLoading = true;
 		},
 		autoLaunch : true
 	});
-
+window.lua = lua;
 	var coordLabels = ['x', 'y', 'z'];
 
 	var allInputs = coordLabels.map(function(x) { return 'equation'+x.toUpperCase(); }).concat(['parameters', 'constants']).map(function(id) { return $('#'+id); });
