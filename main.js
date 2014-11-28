@@ -373,14 +373,20 @@ $(document).ready(function() {
 		packageTests : ['symmath'],
 		done : function() {
 			console.log('loaded lua');
-			Lua.execute("package.path = package.path .. ';./?/init.lua'");
-			this.executeAndPrint("symmath = require 'symmath'");
-			this.executeAndPrint("for k,v in pairs(symmath) do _G[k] = v end");
+			this.executeAndPrint(mlstr(function(){/*
+package.path = package.path .. ';./?/init.lua'
+symmath = require 'symmath'
+for k,v in pairs(symmath) do
+	if k ~= 'tostring' then
+		_G[k] = v
+	end
+end
+*/}));
 			luaDoneLoading = true;
 		},
 		autoLaunch : true
 	});
-
+window.lua = lua;
 	var coordLabels = ['x', 'y', 'z'];
 
 	var allInputs = coordLabels.map(function(x) { return 'equation'+x.toUpperCase(); }).concat(['parameters', 'constants']).map(function(id) { return $('#'+id); });
