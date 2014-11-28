@@ -377,11 +377,11 @@ $(document).ready(function() {
 package.path = package.path .. ';./?/init.lua'
 symmath = require 'symmath'
 for k,v in pairs(symmath) do
-	if k ~= 'tostring' then
+	if not _G[k] then	-- only merge into global if it's not already defined (I'm thinking of you, tostring)
 		_G[k] = v
 	end
 end
-*/}));
+			*/}));
 			luaDoneLoading = true;
 		},
 		autoLaunch : true
