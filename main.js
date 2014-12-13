@@ -429,11 +429,11 @@ window.lua = lua;
 				//since directing error doesn't work -- all errors result in stdout printing "ERROR attempt to call string" 
 				capture({
 					callback : function() {
-						Lua.execute("eqn = simplify("+eqn+")");
-						Lua.execute("if type(eqn) == 'number' then eqn = Constant(eqn) end");
+						lua.execute("eqn = simplify("+eqn+")");
+						lua.execute("if type(eqn) == 'number' then eqn = Constant(eqn) end");
 					},
 					output : function(s) {
-						//don't throw -- Lua.execute will catch it.
+						//don't throw -- lua.execute will catch it.
 						console.log('Lua error! '+s);
 						failed = true;
 					}
@@ -448,7 +448,7 @@ window.lua = lua;
 						var luaCmd = "print((require 'symmath.tostring.JavaScript'):compile(eqn, {"+params+"}))";
 						console.log('executing lua '+luaCmd);
 						//print commands are going to the old output ...
-						Lua.execute(luaCmd);
+						lua.execute(luaCmd);
 					},
 					output : function(jsCmd) {
 						console.log('got JS output '+jsCmd);
@@ -466,7 +466,7 @@ window.lua = lua;
 					callback : function() {
 						var luaCmd = "print((require 'symmath.tostring.LaTeX')(eqn))"
 						console.log('executing lua '+luaCmd);
-						Lua.execute(luaCmd);
+						lua.execute(luaCmd);
 					},
 					output : function(TeX) {
 						console.log('got TeX output '+TeX);
