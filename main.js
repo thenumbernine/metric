@@ -374,7 +374,7 @@ $(document).ready(function() {
 		done : function() {
 			console.log('loaded lua');
 			this.executeAndPrint(mlstr(function(){/*
-package.path = package.path .. ';./?/init.lua'
+package.path = package.path .. ';./?/?.lua'
 symmath = require 'symmath'
 for k,v in pairs(symmath) do
 	if not _G[k] then	-- only merge into global if it's not already defined (I'm thinking of you, tostring)
