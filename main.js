@@ -464,7 +464,7 @@ window.lua = lua;
 				//while we're here, let's store the LaTex generated from the equations ...
 				capture({
 					callback : function() {
-						var luaCmd = "print((require 'symmath.tostring.LaTeX')(eqn))"
+						var luaCmd = "print(((require 'symmath.tostring.LaTeX')(eqn)))"
 						console.log('executing lua '+luaCmd);
 						lua.execute(luaCmd);
 					},
