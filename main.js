@@ -430,6 +430,17 @@ window.lua = lua;
 				capture({
 					callback : function() {
 						lua.execute("eqn = simplify("+eqn+")");
+						//hmm, simplify trig better ...
+						lua.execute(mlstr(function(){/*
+eqn = eqn:map(function(expr)
+    if symmath.powOp.is(expr)
+    and expr[2] == symmath.Constant(2)
+    and symmath.cos.is(expr[1])
+    then
+        return 1 - symmath.sin(expr[1][1]:clone())^2
+    end
+end)()
+						*/}));	
 						lua.execute("if type(eqn) == 'number' then eqn = Constant(eqn) end");
 					},
 					output : function(s) {
