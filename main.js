@@ -470,7 +470,7 @@ window.lua = lua;
 					},
 					output : function(TeX) {
 						console.log('got TeX output '+TeX);
-						if (texLabel !== undefined) TeX = texLabel + ' = ' + TeX;
+						if (texLabel !== undefined) TeX = texLabel + ' = {' + TeX + '}';
 						propertiesHTML += '\\( ' + TeX + ' \\)<br>\n';
 					}
 				});
