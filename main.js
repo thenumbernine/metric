@@ -369,18 +369,15 @@ $(document).ready(function() {
 	console.log('loading lua');
 	var luaDoneLoading = false;
 	var lua = new EmbeddedLuaInterpreter({
-		packages : ['ext', 'symmath'],
+		packages : ['ext', 'gnuplot', 'symmath'],
 		packageTests : ['symmath'],
 		done : function() {
 			console.log('loaded lua');
-			this.executeAndPrint(mlstr(function(){/*
-package.path = package.path .. ';./?/?.lua'
-symmath = require 'symmath'
-for k,v in pairs(symmath) do
-	if not _G[k] then	-- only merge into global if it's not already defined (I'm thinking of you, tostring)
-		_G[k] = v
-	end
-end
+			this.execute(mlstr(function(){/*
+require 'symmath'.setup()
+print('symmath '..tostring(symmath))
+print('sin '..tostring(sin))
+print('cos '..tostring(cos))
 			*/}));
 			luaDoneLoading = true;
 		},
@@ -430,17 +427,6 @@ window.lua = lua;
 				capture({
 					callback : function() {
 						lua.execute("eqn = simplify("+eqn+")");
-						//hmm, simplify trig better ...
-						lua.execute(mlstr(function(){/*
-eqn = eqn:map(function(expr)
-    if symmath.powOp.is(expr)
-    and expr[2] == symmath.Constant(2)
-    and symmath.cos.is(expr[1])
-    then
-        return 1 - symmath.sin(expr[1][1]:clone())^2
-    end
-end)()
-						*/}));	
 						lua.execute("if type(eqn) == 'number' then eqn = Constant(eqn) end");
 					},
 					output : function(s) {
