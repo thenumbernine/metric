@@ -365,32 +365,20 @@ $(document).ready(function() {
 
 	currentCoordChart = coordCharts.Spherical;
 
+	
+
+
 	//init lua
 	console.log('loading lua');
 	var luaDoneLoading = false;
 	var lua = new EmbeddedLuaInterpreter({
-		packages : ['ext', 'gnuplot', 'symmath'],
+		packages : ['ext', 'symmath'],
 		packageTests : ['symmath'],
 		done : function() {
 			console.log('loaded lua');
-			this.execute(mlstr(function(){/*
-require 'symmath'.setup()
-print('symmath '..tostring(symmath))
-print('sin '..tostring(sin))
-print('cos '..tostring(cos))
-			*/}));
-			luaDoneLoading = true;
-		},
-		autoLaunch : true
-	});
-window.lua = lua;
-	var coordLabels = ['x', 'y', 'z'];
 
-	var allInputs = coordLabels.map(function(x) { return 'equation'+x.toUpperCase(); }).concat(['parameters', 'constants']).map(function(id) { return $('#'+id); });
-	
-	//args: done: what to execute next
-	var updateEquations = function() {
-		var doUpdateEquations = function() {
+			var lua = this;
+
 			//args: callback = what to execute, output = where to redirect output, error = where to redirect errors
 			var capture = function(args) {
 				//now cycle through coordinates, evaluate data points, and get the data back into JS
@@ -403,6 +391,50 @@ window.lua = lua;
 				lua.print = oldPrint;
 				lua.printErr = oldError;
 			};
+	
+			capture({
+				callback : function() {
+			
+			lua.executeAndPrint(mlstr(function(){/*
+require 'symmath'.setup()
+print('symmath '..tostring(symmath))
+print('sin '..tostring(sin))
+print('cos '..tostring(cos))
+			*/}));
+			console.log('initialized symmath');
+
+				},
+				output : function(s) {
+					console.log(s);
+				}
+			});
+			
+			luaDoneLoading = true;
+		},
+		autoLaunch : true
+	});
+window.lua = lua;
+	var coordLabels = ['x', 'y', 'z'];
+
+	var allInputs = coordLabels.map(function(x) { return 'equation'+x.toUpperCase(); }).concat(['parameters', 'constants']).map(function(id) { return $('#'+id); });
+	
+	//args: done: what to execute next
+	var updateEquations = function() {
+		var doUpdateEquations = function() {
+		
+			//args: callback = what to execute, output = where to redirect output, error = where to redirect errors
+			var capture = function(args) {
+				//now cycle through coordinates, evaluate data points, and get the data back into JS
+				//push module output and redirect to a buffer of my own
+				var oldPrint = lua.print;
+				var oldError = lua.printErr;
+				if (args.output !== undefined) lua.print = args.output;
+				if (args.error !== undefined) lua.printErr = args.error;
+				args.callback();
+				lua.print = oldPrint;
+				lua.printErr = oldError;
+			};
+			
 			
 			//declare parameter variables
 			var parameters = $('#parameters').val().split(',').map(function(s) { return s.trim(); });
@@ -442,7 +474,7 @@ window.lua = lua;
 				var resultFunction = undefined;
 				capture({
 					callback : function() {
-						var luaCmd = "print((require 'symmath.tostring.JavaScript'):compile(eqn, {"+params+"}))";
+						var luaCmd = "print((require 'symmath.export.JavaScript'):compile(eqn, {"+params+"}))";
 						console.log('executing lua '+luaCmd);
 						//print commands are going to the old output ...
 						lua.execute(luaCmd);
@@ -461,7 +493,7 @@ window.lua = lua;
 				//while we're here, let's store the LaTex generated from the equations ...
 				capture({
 					callback : function() {
-						var luaCmd = "print(((require 'symmath.tostring.LaTeX')(eqn)))"
+						var luaCmd = "print(((require 'symmath.export.LaTeX')(eqn)))"
 						console.log('executing lua '+luaCmd);
 						lua.execute(luaCmd);
 					},
