@@ -396,10 +396,12 @@ $(document).ready(function() {
 				callback : function() {
 			
 			lua.executeAndPrint(mlstr(function(){/*
-require 'symmath'.setup()
-print('symmath '..tostring(symmath))
-print('sin '..tostring(sin))
-print('cos '..tostring(cos))
+local symmath = require 'symmath'
+symmath.setup()
+local LaTeX = symmath.export.LaTeX	
+symmath.tostring = LaTeX
+LaTeX.openSymbol = ''
+LaTeX.closeSymbol = ''
 			*/}));
 			console.log('initialized symmath');
 
@@ -463,7 +465,7 @@ window.lua = lua;
 					},
 					output : function(s) {
 						//don't throw -- lua.execute will catch it.
-						console.log('Lua error! '+s);
+						console.log('Lua error!', s);
 						failed = true;
 					}
 				});
@@ -474,33 +476,43 @@ window.lua = lua;
 				var resultFunction = undefined;
 				capture({
 					callback : function() {
-						var luaCmd = "print((require 'symmath.export.JavaScript'):compile(eqn, {"+params+"}))";
+						//execute it as a single line, so output() could capture it all at once (because output() seems to be called line-by-line)
+						var luaCmd = "print((require 'symmath.export.JavaScript':toFuncCode{func='__tmpf', output={eqn}, input={"+params+"}}:gsub('\\n', ' ')))";
 						console.log('executing lua '+luaCmd);
 						//print commands are going to the old output ...
 						lua.execute(luaCmd);
+						//TODO if lua has a syntax error, I just get "attempt to call a string value"
+						// and I think this is going on inside of lua.vm.js ... time to replace it yet?
 					},
 					output : function(jsCmd) {
 						console.log('got JS output '+jsCmd);
 						try {
-							resultFunction = eval(jsCmd);
+							//seems I used to be able to eval("function(){}") and get a function value back ... not anymore?
+							//resultFunction = eval(jsCmd);
+							eval(jsCmd);
+							resultFunction = __tmpf;
+							__tmpf = undefined;
 						} catch (e) {
+							console.log("Lua error!", e);
 							failed = true;
 						}
 					}
 				});
-				if (failed) throw 'Lua error!';
+				if (failed) {
+					throw 'Lua error!';
+				}
 
 				//while we're here, let's store the LaTex generated from the equations ...
 				capture({
 					callback : function() {
-						var luaCmd = "print(((require 'symmath.export.LaTeX')(eqn)))"
+						var luaCmd = "print((require 'symmath.export.LaTeX'(eqn)))"
 						console.log('executing lua '+luaCmd);
 						lua.execute(luaCmd);
 					},
 					output : function(TeX) {
 						console.log('got TeX output '+TeX);
 						if (texLabel !== undefined) TeX = texLabel + ' = {' + TeX + '}';
-						propertiesHTML += '\\( ' + TeX + ' \\)<br>\n';
+						propertiesHTML += '$ ' + TeX + ' $<br>\n';
 					}
 				});
 
@@ -609,6 +621,7 @@ window.lua = lua;
 					};
 				});
 			} catch (e) {
+				console.log("failed: ", e);
 				failed = true;
 			}
 			if (failed) {
@@ -994,4 +1007,3 @@ void main() {
 	
 	update();
 });
-
