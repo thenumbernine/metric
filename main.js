@@ -372,7 +372,7 @@ $(document).ready(function() {
 	console.log('loading lua');
 	var luaDoneLoading = false;
 	var lua = new EmbeddedLuaInterpreter({
-		packages : ['ext', 'symmath'],
+		packages : ['ext', 'symmath', 'complex'],
 		packageTests : ['symmath'],
 		done : function() {
 			console.log('loaded lua');
