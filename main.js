@@ -1,31 +1,43 @@
-var canvas;
-var gl;
-var glutil;
-var mouse;
-var sceneObj;
-var meshObj;
+import {vec2, vec3, quat} from '/js/gl-matrix-3.4.1/index.js';
+import {DOM, getIDs, removeFromParent, show, hide} from '/js/util.js';
+import {EmbeddedLuaInterpreter} from '/js/lua.vm-util.js.lua';
+import {GLUtil} from '/js/gl-util.js';
+import {Mouse3D} from '/js/mouse3d.js';
+import {makeGradient} from '/js/gl-util-Gradient.js';
+import {makeUnitQuad} from '/js/gl-util-UnitQuad.js';
+import {makeFloatTexture2D} from '/js/gl-util-FloatTexture2D.js';
+
+const ids = getIDs();
+window.ids = ids;
+const urlparams = new URLSearchParams(window.location.search);
+
+let canvas;
+let gl;
+let glutil;
+let mouse;
+let sceneObj;
+let meshObj;
 
 function resize() {
 	canvas.width = window.innerWidth;
 	canvas.height = window.innerHeight;
 	glutil.resize();
 
-	var info = $('#info');
-	var width = window.innerWidth 
-		- parseInt(info.css('padding-left'))
-		- parseInt(info.css('padding-right'));
-	info.width(width);
-	var height = window.innerHeight
-		- parseInt(info.css('padding-top'))
-		- parseInt(info.css('padding-bottom'));
-	info.height(height - 32);
-	$('#panel').height(height - 16);
+	const width = window.innerWidth 
+		- parseInt(ids.info.style.paddingLeft)
+		- parseInt(ids.info.style.paddingRight);
+	ids.info.style.width = width+'px';
+	const height = window.innerHeight
+		- parseInt(ids.info.style.paddingTop)
+		- parseInt(ids.info.style.paddingBottom);
+	ids.info.style.height = (height - 32)+'px';
+	ids.panel.style.height = (height - 16)+'px';
 }
 
 function update() {
 	//update
 	glutil.draw();
-	requestAnimFrame(update);
+	requestAnimationFrame(update);
 };
 
 /*
@@ -45,7 +57,7 @@ unitDiff: diff, normalized algebraically to remove singularities
 
 
 */
-var coordCharts = {
+let coordCharts = {
 	/*
 	metric:
 		g_theta_theta = r^2
@@ -121,15 +133,15 @@ var coordCharts = {
 		initialDirection : [0,1]
 	}
 };
-var currentCoordChart;
+let currentCoordChart;
 
-var intDivs = [120,120];
+let intDivs = [120,120];
 
-var intCoordToCoord = function(intCoord) {
-	var coord = [];
-	var coordMin = currentCoordChart.coordinateMin;
-	var coordMax = currentCoordChart.coordinateMax;
-	for (var k = 0; k < intCoord.length; ++k) {
+let intCoordToCoord = function(intCoord) {
+	let coord = [];
+	let coordMin = currentCoordChart.coordinateMin;
+	let coordMax = currentCoordChart.coordinateMax;
+	for (let k = 0; k < intCoord.length; ++k) {
 		coord[k] = intCoord[k] / (intDivs[k]-1) * (coordMax[k] - coordMin[k]) + coordMin[k];
 	}
 	return coord;
@@ -137,24 +149,24 @@ var intCoordToCoord = function(intCoord) {
 
 function reset() {
 	//generate metric geometry
-	var thetaDiv = intDivs[0];
-	var phiDiv = intDivs[1];
-	for (var itheta = 0; itheta < thetaDiv; ++itheta) {
-		for (var iphi = 0; iphi < phiDiv; ++iphi) {
-			var intCoord = [itheta, iphi];
-			var coord = intCoordToCoord(intCoord);
-			var mappedCoord = currentCoordChart.mapping(coord);
-			var normal = currentCoordChart.unitDiff(coord, 2);
-			for (var k = 0; k < 2; ++k) {
+	let thetaDiv = intDivs[0];
+	let phiDiv = intDivs[1];
+	for (let itheta = 0; itheta < thetaDiv; ++itheta) {
+		for (let iphi = 0; iphi < phiDiv; ++iphi) {
+			let intCoord = [itheta, iphi];
+			let coord = intCoordToCoord(intCoord);
+			let mappedCoord = currentCoordChart.mapping(coord);
+			let normal = currentCoordChart.unitDiff(coord, 2);
+			for (let k = 0; k < 2; ++k) {
 				meshObj.attrs.intCoord.data[k + 2 * (iphi + phiDiv * itheta)] = intCoord[k];
 			}
-			for (var k = 0; k < 2; ++k) {
+			for (let k = 0; k < 2; ++k) {
 				meshObj.attrs.coord.data[k + 2 * (iphi + phiDiv * itheta)] = coord[k];
 			}
-			for (var k = 0; k < 3; ++k) {
+			for (let k = 0; k < 3; ++k) {
 				meshObj.attrs.vertex.data[k + 3 * (iphi + phiDiv * itheta)] = mappedCoord[k];
 			}
-			for (var k = 0; k < 3; ++k) {
+			for (let k = 0; k < 3; ++k) {
 				meshObj.attrs.normal.data[k + 3 * (iphi + phiDiv * itheta)] = normal[k];
 			}
 		}
@@ -170,53 +182,53 @@ function reset() {
 	selectCoord(currentCoord);
 }
 
-var selectionObj;
-var selectionRes = 100;
-var basisObjs = [];
-//var connObjs = [];
-var partialPathObj;
-var geodesicPathObj;
-var pathLength = 5000;
-var currentCoord = [0.26623666555845704, 1.8215957403167709];
-var currentDirection = [0, 1];
+let selectionObj;
+let selectionRes = 100;
+let basisObjs = [];
+//let connObjs = [];
+let partialPathObj;
+let geodesicPathObj;
+let pathLength = 5000;
+let currentCoord = [0.26623666555845704, 1.8215957403167709];
+let currentDirection = [0, 1];
 function selectCoord(coord) {
 	currentCoord = coord.clone();
-	var basis0 = currentCoordChart.diff(coord, 0);
-	var basis1 = currentCoordChart.diff(coord, 1);
-	var basis = [basis0, basis1];
+	let basis0 = currentCoordChart.diff(coord, 0);
+	let basis1 = currentCoordChart.diff(coord, 1);
+	let basis = [basis0, basis1];
 	
-	var unitBasis0 = currentCoordChart.unitDiff(coord, 0);
-	var unitBasis1 = currentCoordChart.unitDiff(coord, 1);
-	var normal = currentCoordChart.unitDiff(coord,2);
-	var unitBasis = [unitBasis0, unitBasis1];
+	let unitBasis0 = currentCoordChart.unitDiff(coord, 0);
+	let unitBasis1 = currentCoordChart.unitDiff(coord, 1);
+	let normal = currentCoordChart.unitDiff(coord,2);
+	let unitBasis = [unitBasis0, unitBasis1];
 	
-	var mappedCoord = currentCoordChart.mapping(coord);
+	let mappedCoord = currentCoordChart.mapping(coord);
 
-	var selectionRadius = .1;
-	var modv = vec3.create();
-	for (var i = 0; i < selectionRes; ++i) {
-		var psi = i/selectionRes * Math.PI * 2;
+	let selectionRadius = .1;
+	let modv = vec3.create();
+	for (let i = 0; i < selectionRes; ++i) {
+		let psi = i/selectionRes * Math.PI * 2;
 		vec3.scaleAndAdd(modv, mappedCoord, unitBasis0, selectionRadius * Math.cos(psi));
 		vec3.scaleAndAdd(modv, modv, unitBasis1, selectionRadius * Math.sin(psi));
-		for (var j = 0; j < 3; ++j) {
+		for (let j = 0; j < 3; ++j) {
 			selectionObj.attrs.vertex.data[3 * i + j] = modv[j];
 		}
 	}
 	selectionObj.attrs.vertex.updateData();
 
-	var basisLength = .4;
-	for (var i = 0; i < 2; ++i) {
-		var basisObj = basisObjs[i];
-		for (var k = 0; k < 3; ++k) {
+	let basisLength = .4;
+	for (let i = 0; i < 2; ++i) {
+		let basisObj = basisObjs[i];
+		for (let k = 0; k < 3; ++k) {
 			basisObj.attrs.vertex.data[k] = mappedCoord[k];
 			basisObj.attrs.vertex.data[3 + k] = mappedCoord[k] + basisLength * basis[i][k] + .01 * normal[k];
 		}
 		basisObj.attrs.vertex.updateData();
 		/* need a better way to visualize this ...
-		for (var j = 0; j < 2; ++j) {
-			var conn = currentCoordChart.connection(coord, i, j);
-			var connObj = connObjs[i][j];
-			for (var k = 0; k < 3; ++k) {
+		for (let j = 0; j < 2; ++j) {
+			let conn = currentCoordChart.connection(coord, i, j);
+			let connObj = connObjs[i][j];
+			for (let k = 0; k < 3; ++k) {
 				connObj.attrs.vertex.data[k] = mappedCoord[k] + basisLength * basis[i][k];
 				connObj.attrs.vertex.data[3+k] = mappedCoord[k] + basisLength * (basis[i][k] + conn[0] * basis[0][k] + conn[1] * basis[1][k]);
 			}
@@ -230,36 +242,36 @@ function selectCoord(coord) {
 
 function chooseDirection(direction) {
 	currentDirection = direction.clone();
-	var partialCoord = currentCoord.clone();
-	var partialDir = direction.clone();
-	var geoCoord = currentCoord.clone();
-	var geoDir = direction.clone();
-	var step = .001;
-	for (var i = 0; i < pathLength; ++i) {
+	let partialCoord = currentCoord.clone();
+	let partialDir = direction.clone();
+	let geoCoord = currentCoord.clone();
+	let geoDir = direction.clone();
+	let step = .001;
+	for (let i = 0; i < pathLength; ++i) {
 		partialCoord[0] += step * partialDir[0];
 		partialCoord[1] += step * partialDir[1];
-		var mapped = currentCoordChart.mapping(partialCoord);
-		var normal = currentCoordChart.unitDiff(partialCoord,2);
+		let mapped = currentCoordChart.mapping(partialCoord);
+		let normal = currentCoordChart.unitDiff(partialCoord,2);
 		partialPathObj.attrs.vertex.data[3*i+0] = mapped[0] + .01 * normal[0];
 		partialPathObj.attrs.vertex.data[3*i+1] = mapped[1] + .01 * normal[1];
 		partialPathObj.attrs.vertex.data[3*i+2] = mapped[2] + .01 * normal[2];
 	}
 	partialPathObj.attrs.vertex.updateData();
-	for (var i = 0; i < pathLength; ++i) {
+	for (let i = 0; i < pathLength; ++i) {
 		geoCoord[0] += step * geoDir[0];
 		geoCoord[1] += step * geoDir[1];
-		var geoAccel = [0,0];
-		for (var j = 0; j < 2; ++j) {
-			for (var k = 0; k < 2; ++k) {
-				for (var l = 0; l < 2; ++l) {
+		let geoAccel = [0,0];
+		for (let j = 0; j < 2; ++j) {
+			for (let k = 0; k < 2; ++k) {
+				for (let l = 0; l < 2; ++l) {
 					geoAccel[j] -= currentCoordChart.connection(geoCoord,k,l)[j] * geoDir[k] * geoDir[l];
 				}
 			}
 		}
 		geoDir[0] += step * geoAccel[0];
 		geoDir[1] += step * geoAccel[1];
-		var mapped = currentCoordChart.mapping(geoCoord);
-		var normal = currentCoordChart.unitDiff(geoCoord,2);
+		let mapped = currentCoordChart.mapping(geoCoord);
+		let normal = currentCoordChart.unitDiff(geoCoord,2);
 		geodesicPathObj.attrs.vertex.data[3*i+0] = mapped[0] + .01 * normal[0];
 		geodesicPathObj.attrs.vertex.data[3*i+1] = mapped[1] + .01 * normal[1];
 		geodesicPathObj.attrs.vertex.data[3*i+2] = mapped[2] + .01 * normal[2];
@@ -267,23 +279,23 @@ function chooseDirection(direction) {
 	geodesicPathObj.attrs.vertex.updateData();
 }
 
-var findClickedCoord;
+let findClickedCoord;
 (function(){
-	var tmp = vec3.create();
-	var tmp2 = vec3.create();
+	let tmp = vec3.create();
+	let tmp2 = vec3.create();
 	findClickedCoord = function() {
-		var mouseDir = vec3.create();
+		let mouseDir = vec3.create();
 		glutil.mouseDir(mouseDir, mouse.xf, mouse.yf);
 		vec3.normalize(mouseDir, mouseDir);
 		//ray intersection test with coordinate chart ...
 		// for now just search for closest point in geometry?
-		var bestDist = undefined;
-		var bestCoord = undefined;
+		let bestDist = undefined;
+		let bestCoord = undefined;
 		vec3.quatZAxis(tmp2, glutil.view.angle);
-		var considered = 0;
-		var pt = vec3.create();
-		for (var i = 0; i < meshObj.attrs.vertex.data.length/3; ++i) {
-			var normal = [
+		let considered = 0;
+		let pt = vec3.create();
+		for (let i = 0; i < meshObj.attrs.vertex.data.length/3; ++i) {
+			let normal = [
 				meshObj.attrs.normal.data[3*i+0],
 				meshObj.attrs.normal.data[3*i+1],
 				meshObj.attrs.normal.data[3*i+2]
@@ -291,7 +303,7 @@ var findClickedCoord;
 			vec3.transformQuat(normal, normal, sceneObj.angle);
 			if (vec3.dot(normal, tmp2) < 0) continue;	//forward dot normal > 0 means the surface is back-facing
 			
-			var vertex = [
+			let vertex = [
 				meshObj.attrs.vertex.data[3*i+0],
 				meshObj.attrs.vertex.data[3*i+1],
 				meshObj.attrs.vertex.data[3*i+2]
@@ -308,7 +320,7 @@ var findClickedCoord;
 			//ray/point distance from view pos / mouse line
 			vec3.sub(tmp, pt, glutil.view.pos);
 			vec3.cross(tmp, tmp, mouseDir);
-			var dist = vec3.length(tmp);
+			let dist = vec3.length(tmp);
 			
 			if (bestDist === undefined || dist < bestDist) {
 				bestDist = dist;
@@ -322,517 +334,520 @@ var findClickedCoord;
 	}
 })();
 
-$(document).ready(function() {
-	$('#panelButton').click(function() {
-		$('#panel').show();	
-		$('#info').hide();
-	});
-	$('#infoButton').click(function() {
-		$('#info').show();
-		$('#panel').hide();
-	});
-	
-	canvas = $('<canvas>', {
-		css : {
-			left : 0,
-			top : 0,
-			position : 'absolute'
-		}
-	}).prependTo(document.body).get(0);
-	$(canvas).disableSelection()
+ids.panelButton.addEventListener('click', e => {
+	show(ids.panel);
+	hide(ids.info);
+});
+ids.infoButton.addEventListener('click', e => {
+	show(ids.info);
+	hide(ids.panel);
+});
 
-	try {
-		glutil = new GLUtil({canvas:canvas});
-		gl = glutil.context;
-	} catch (e) {
-		$(canvas).remove();
-		$('#webglfail').show();
-		throw e;
-	}
-	$('#menu').show();
-	$('#panel').show();
+canvas = DOM('canvas', {
+	css : {
+		left : 0,
+		top : 0,
+		position : 'absolute',
+		userSelect : 'none',
+	},
+	prependTo : document.body,
+});
+window.canvas = canvas;
 
-	if ($.url().param('info')) {
-		$('#info').show();
-		$('#panel').hide();
-	}
+try {
+	glutil = new GLUtil({canvas:canvas});
+	gl = glutil.context;
+} catch (e) {
+	removeFromParent(canvas);
+	show(ids.webglfail);
+	throw e;
+}
+show(ids.menu);
+show(ids.panel);
 
-	window.inputState = 'rotate';
+if (urlparams.get('info')) {
+	show(ids.info);
+	hide(ids.panel);
+}
 
-	$('#tools_rotate').click(function() { inputState = 'rotate'; });
-	$('#tools_select').click(function() { inputState = 'select'; });
-	$('#tools_direction').click(function() { inputState = 'direction'; });
+window.inputState = 'rotate';
 
-	currentCoordChart = coordCharts.Spherical;
+ids.tools_rotate.addEventListener('click', e => { inputState = 'rotate'; });
+ids.tools_select.addEventListener('click', e => { inputState = 'select'; });
+ids.tools_direction.addEventListener('click', e => { inputState = 'direction'; });
 
-	
+currentCoordChart = coordCharts.Spherical;
 
 
-	//init lua
-	console.log('loading lua');
-	var luaDoneLoading = false;
-	var lua = new EmbeddedLuaInterpreter({
-		packages : ['ext', 'symmath', 'complex'],
-		packageTests : ['symmath'],
-		done : function() {
-			console.log('loaded lua');
 
-			var lua = this;
 
-			//args: callback = what to execute, output = where to redirect output, error = where to redirect errors
-			var capture = function(args) {
-				//now cycle through coordinates, evaluate data points, and get the data back into JS
-				//push module output and redirect to a buffer of my own
-				var oldPrint = lua.print;
-				var oldError = lua.printErr;
-				if (args.output !== undefined) lua.print = args.output;
-				if (args.error !== undefined) lua.printErr = args.error;
-				args.callback();
-				lua.print = oldPrint;
-				lua.printErr = oldError;
-			};
-	
-			capture({
-				callback : function() {
-			
-			lua.executeAndPrint(mlstr(function(){/*
+//init lua
+console.log('loading lua');
+let luaDoneLoading = false;
+let lua = new EmbeddedLuaInterpreter({
+	packages : ['ext', 'symmath', 'complex'],
+	packageTests : ['symmath'],
+	done : function() {
+		console.log('loaded lua');
+
+		let lua = this;
+
+		//args: callback = what to execute, output = where to redirect output, error = where to redirect errors
+		let capture = function(args) {
+			//now cycle through coordinates, evaluate data points, and get the data back into JS
+			//push module output and redirect to a buffer of my own
+			let oldPrint = lua.print;
+			let oldError = lua.printErr;
+			if (args.output !== undefined) lua.print = args.output;
+			if (args.error !== undefined) lua.printErr = args.error;
+			args.callback();
+			lua.print = oldPrint;
+			lua.printErr = oldError;
+		};
+
+		capture({
+			callback : function() {
+		
+		lua.executeAndPrint(`
 local symmath = require 'symmath'
 symmath.setup()
 local LaTeX = symmath.export.LaTeX	
 symmath.tostring = LaTeX
 LaTeX.openSymbol = ''
 LaTeX.closeSymbol = ''
-			*/}));
-			console.log('initialized symmath');
+`);
+console.log('initialized symmath');
 
+			},
+			output : function(s) {
+				console.log(s);
+			}
+		});
+		
+		luaDoneLoading = true;
+	},
+	autoLaunch : true
+});
+window.lua = lua;
+let coordLabels = ['x', 'y', 'z'];
+
+let allInputs = coordLabels
+.map(x => { return 'equation'+x.toUpperCase(); })
+.concat(['parameters', 'constants'])
+.map(id => { return ids[id]; });
+
+//args: done: what to execute next
+let updateEquations = function() {
+	let doUpdateEquations = function() {
+	
+		//args: callback = what to execute, output = where to redirect output, error = where to redirect errors
+		let capture = function(args) {
+			//now cycle through coordinates, evaluate data points, and get the data back into JS
+			//push module output and redirect to a buffer of my own
+			let oldPrint = lua.print;
+			let oldError = lua.printErr;
+			if (args.output !== undefined) lua.print = args.output;
+			if (args.error !== undefined) lua.printErr = args.error;
+			args.callback();
+			lua.print = oldPrint;
+			lua.printErr = oldError;
+		};
+		
+		
+		//declare parameter variables
+		let parameters = ids.parameters.value.split(',').map(s => { return s.trim(); });
+		parameters.forEach(param => {
+			lua.executeAndPrint(param+" = Variable('"+param+"')");
+		});
+		
+		ids.constants.value.split(',').map(s => { 
+			s = s.trim();
+			let eqs = s.split('=').map(side => { return side.trim(); });
+			let param = eqs[0];
+			let value = eqs[1];
+			lua.executeAndPrint(param+" = Constant("+value+")");
+		});
+		
+		let propertiesHTML = '';
+		
+		let luaEqnToJSFunc = function(eqn, params, texLabel) {
+			let failed = false;
+			//here I'm using output for errors
+			//since directing error doesn't work -- all errors result in stdout printing "ERROR attempt to call string" 
+			capture({
+				callback : function() {
+					lua.execute("eqn = simplify("+eqn+")");
+					lua.execute("if type(eqn) == 'number' then eqn = Constant(eqn) end");
 				},
 				output : function(s) {
-					console.log(s);
+					//don't throw -- lua.execute will catch it.
+					console.log('Lua error!', s);
+					failed = true;
 				}
 			});
-			
-			luaDoneLoading = true;
-		},
-		autoLaunch : true
-	});
-window.lua = lua;
-	var coordLabels = ['x', 'y', 'z'];
-
-	var allInputs = coordLabels.map(function(x) { return 'equation'+x.toUpperCase(); }).concat(['parameters', 'constants']).map(function(id) { return $('#'+id); });
-	
-	//args: done: what to execute next
-	var updateEquations = function() {
-		var doUpdateEquations = function() {
+			if (failed) throw 'Lua error!';
 		
-			//args: callback = what to execute, output = where to redirect output, error = where to redirect errors
-			var capture = function(args) {
-				//now cycle through coordinates, evaluate data points, and get the data back into JS
-				//push module output and redirect to a buffer of my own
-				var oldPrint = lua.print;
-				var oldError = lua.printErr;
-				if (args.output !== undefined) lua.print = args.output;
-				if (args.error !== undefined) lua.printErr = args.error;
-				args.callback();
-				lua.print = oldPrint;
-				lua.printErr = oldError;
-			};
-			
-			
-			//declare parameter variables
-			var parameters = $('#parameters').val().split(',').map(function(s) { return s.trim(); });
-			$.each(parameters, function(j,param) {
-				lua.executeAndPrint(param+" = Variable('"+param+"')");
-			});
-			
-			$('#constants').val().split(',').map(function(s) { 
-				s = s.trim();
-				var eqs = s.split('=').map(function(side) { return side.trim(); });
-				var param = eqs[0];
-				var value = eqs[1];
-				lua.executeAndPrint(param+" = Constant("+value+")");
-			});		
-			
-			var propertiesHTML = '';
-			
-			var luaEqnToJSFunc = function(eqn, params, texLabel) {
-				var failed = false;
-				//here I'm using output for errors
-				//since directing error doesn't work -- all errors result in stdout printing "ERROR attempt to call string" 
-				capture({
-					callback : function() {
-						lua.execute("eqn = simplify("+eqn+")");
-						lua.execute("if type(eqn) == 'number' then eqn = Constant(eqn) end");
-					},
-					output : function(s) {
-						//don't throw -- lua.execute will catch it.
-						console.log('Lua error!', s);
+			//here I'm using output for capturing the compiled lua code
+			// I'm recording errors if the captured code fails to compile in JavaScript
+			let resultFunction = undefined;
+			capture({
+				callback : function() {
+					//execute it as a single line, so output() could capture it all at once (because output() seems to be called line-by-line)
+					let luaCmd = "print((require 'symmath.export.JavaScript':toFuncCode{func='__tmpf', output={eqn}, input={"+params+"}}:gsub('\\n', ' ')))";
+					console.log('executing lua '+luaCmd);
+					//print commands are going to the old output ...
+					lua.execute(luaCmd);
+					//TODO if lua has a syntax error, I just get "attempt to call a string value"
+					// and I think this is going on inside of lua.vm.js ... time to replace it yet?
+				},
+				output : function(jsCmd) {
+					console.log('got JS output '+jsCmd);
+					try {
+						//seems I used to be able to eval("function(){}") and get a function value back ... not anymore?
+						//resultFunction = eval(jsCmd);
+						eval(jsCmd);
+						resultFunction = __tmpf;
+						__tmpf = undefined;
+					} catch (e) {
+						console.log("Lua error!", e);
 						failed = true;
 					}
-				});
-				if (failed) throw 'Lua error!';	//'return true' means break in $.each	
-			
-				//here I'm using output for capturing the compiled lua code
-				// I'm recording errors if the captured code fails to compile in JavaScript
-				var resultFunction = undefined;
-				capture({
-					callback : function() {
-						//execute it as a single line, so output() could capture it all at once (because output() seems to be called line-by-line)
-						var luaCmd = "print((require 'symmath.export.JavaScript':toFuncCode{func='__tmpf', output={eqn}, input={"+params+"}}:gsub('\\n', ' ')))";
-						console.log('executing lua '+luaCmd);
-						//print commands are going to the old output ...
-						lua.execute(luaCmd);
-						//TODO if lua has a syntax error, I just get "attempt to call a string value"
-						// and I think this is going on inside of lua.vm.js ... time to replace it yet?
-					},
-					output : function(jsCmd) {
-						console.log('got JS output '+jsCmd);
-						try {
-							//seems I used to be able to eval("function(){}") and get a function value back ... not anymore?
-							//resultFunction = eval(jsCmd);
-							eval(jsCmd);
-							resultFunction = __tmpf;
-							__tmpf = undefined;
-						} catch (e) {
-							console.log("Lua error!", e);
-							failed = true;
-						}
-					}
-				});
-				if (failed) {
-					throw 'Lua error!';
 				}
-
-				//while we're here, let's store the LaTex generated from the equations ...
-				capture({
-					callback : function() {
-						var luaCmd = "print((require 'symmath.export.LaTeX'(eqn)))"
-						console.log('executing lua '+luaCmd);
-						lua.execute(luaCmd);
-					},
-					output : function(TeX) {
-						console.log('got TeX output '+TeX);
-						if (texLabel !== undefined) TeX = texLabel + ' = {' + TeX + '}';
-						propertiesHTML += '$ ' + TeX + ' $<br>\n';
-					}
-				});
-
-				return resultFunction;
-			};
-
-			//compile equations here
-			var coordCallbacks = [];	//coordCallbacks[xyz]
-			var coordDerivs = [];		//coordDerivs[xyz][uv|normal]
-			var metric = [];			//metric[uv][uv] = g_ij = e_i dot e_j
-			var metricEqn = [];
-			var invMetricEqn = [];		//invMetricEqn[uv][uv] = g^ij
-			var diffMetricEqn = [];		//diffMetricEqn[uv][uv][uv] = g_ij,k
-			var conn1stEqn = [];		//conn1stEqn[uv][uv][uv] = conn_ijk = 1/2 (g_ij,k + g_ik,j - g_jk,i)
-			var conn2nd = [];			//conn2nd[uv][uv][uv] = conn^i_jk = g^il * conn_ljk
-			var conn2ndEqn = [];
-			console.log('generating coordinate chart functions...');
-			var failed = false;
-			var equations = [];
-			for (var i = 0; i < coordLabels.length; ++i) {
-				equations[i] = $('#equation'+coordLabels[i].toUpperCase()).val();
-			}
-			try {
-				//get functions
-				$.each(equations, function(i,eqn) {
-					coordCallbacks[i] = luaEqnToJSFunc(eqn, parameters.join(', '), coordLabels[i]);
-					coordDerivs[i] = [];
-				});
-				$.each(equations, function(i,eqn) {
-					$.each(parameters, function(j,param) {
-						coordDerivs[i][j] = luaEqnToJSFunc('diff('+eqn+', '+param+')', parameters.join(', '), '{{d'+coordLabels[i]+'} \\over {d'+param+'}}');
-					});
-				});
-
-				//get metric and its derivative 
-				$.each(parameters, function(i,u) {
-					metric[i] = [];
-					metricEqn[i] = [];
-					diffMetricEqn[i] = [];
-					$.each(parameters, function(j,v) {
-						var sum = [];
-						$.each(equations, function(k,eqn) {
-							sum.push('diff('+eqn+', '+u+') * diff('+eqn+', '+v+')');
-						});
-						metricEqn[i][j] = sum.join(' + ');
-						metric[i][j] = luaEqnToJSFunc(metricEqn[i][j], parameters.join(', '), 'g_{'+u+' '+v+'}');
-						diffMetricEqn[i][j] = [];
-						$.each(parameters, function(k,w) {
-							diffMetricEqn[i][j][k] = 'diff('+metricEqn[i][j]+', '+w+')';
-						});
-					});
-				});
-
-				//inverse metric
-				if (parameters.length != 2) throw 'only works with two parameters';
-				var metricDetEqn = '('+metricEqn[0][0]+') * ('+metricEqn[1][1]+') - ('+metricEqn[1][0]+') * ('+metricEqn[0][1]+')';
-				var invMetricEqn = [
-					[	'('+metricEqn[1][1]+') / ('+metricDetEqn+')',	//00
-						'-('+metricEqn[0][1]+') / ('+metricDetEqn+')'],	//01
-					[	'-('+metricEqn[1][0]+') / ('+metricDetEqn+')',	//10
-						'('+metricEqn[0][0]+') / ('+metricDetEqn+')']
-				];
-	
-				//1st conns
-				$.each(parameters, function(i,u) {
-					conn1stEqn[i] = [];
-					$.each(parameters, function(j,v) {
-						conn1stEqn[i][j] = [];
-						$.each(parameters, function(k,w) {
-							conn1stEqn[i][j][k] = '1/2 * ('+diffMetricEqn[i][j][k]+' + '+diffMetricEqn[i][k][j]+' - '+diffMetricEqn[j][k][i]+')';
-						});
-					});
-				});
-
-				//2nd conns
-				$.each(parameters, function(i,u) {
-					conn2nd[i] = [];
-					conn2ndEqn[i] = [];
-					$.each(parameters, function(j,v) {
-						conn2nd[i][j] = [];
-						conn2ndEqn[i][j] = [];
-						$.each(parameters, function(k,w) {
-							var sum = [];
-							for (var l = 0; l < parameters.length; ++l) {
-								sum.push('('+invMetricEqn[i][l]+') * ('+conn1stEqn[l][j][k]+')');
-							}
-							conn2ndEqn[i][j][k] = sum.join(' + ');
-							conn2nd[i][j][k] = luaEqnToJSFunc(conn2ndEqn[i][j][k], parameters.join(', '), '{Gamma^'+u+'}_{'+v+' '+w+'}');
-						});
-					});
-				});
-				
-				//get normal
-				$.each(equations, function(i,eqn) {
-					var j = (i+1)%equations.length;
-					var k = (j+1)%equations.length;
-					var dj_du = coordDerivs[j][0];
-					var dk_du = coordDerivs[k][0];
-					var dj_dv = coordDerivs[j][1];
-					var dk_dv = coordDerivs[k][1];
-					coordDerivs[i][2] = function() { 
-						return dj_du.apply(undefined, arguments) 
-							* dk_dv.apply(undefined, arguments) 
-							- dk_du.apply(undefined,arguments) 
-							* dj_dv.apply(undefined,arguments);
-					};
-				});
-			} catch (e) {
-				console.log("failed: ", e);
-				failed = true;
-			}
+			});
 			if (failed) {
-				//color the failed input textarea red
-				$.each(allInputs, function(i,input) {
-					input.css({background:'rgb(255,127,127)'});
-				});
-				return;
-			} else {
-				$.each(allInputs, function(i,input) {
-					input.css({background:'white'});
-				});
+				throw 'Lua error!';
 			}
-			currentCoordChart.mapping = function(coord) {
-				var result = [];
-				for (var k = 0; k < coordLabels.length; ++k) {
-					result[k] = coordCallbacks[k].apply(undefined, coord);
+
+			//while we're here, let's store the LaTex generated from the equations ...
+			capture({
+				callback : function() {
+					let luaCmd = "print((require 'symmath.export.LaTeX'(eqn)))"
+					console.log('executing lua '+luaCmd);
+					lua.execute(luaCmd);
+				},
+				output : function(TeX) {
+					console.log('got TeX output '+TeX);
+					if (texLabel !== undefined) TeX = texLabel + ' = {' + TeX + '}';
+					propertiesHTML += '$ ' + TeX + ' $<br>\n';
 				}
-				return result;
-			};
-			currentCoordChart.diff = function(coord, dim) {
-				var result = [];
-				for (var k = 0; k < coordLabels.length; ++k) {
-					result[k] = coordDerivs[k][dim].apply(undefined, coord);
-				}
-				return result;
-			};
-			currentCoordChart.unitDiff = function(coord, dim) {
-				var diff = this.diff(coord, dim);
-				var len = vec3.length(diff);
-				return [diff[0] / len, diff[1] / len, diff[2] / len];
-			};
-			currentCoordChart.connection = function(coord, k, j) {
-				var result = [];
-				for (var i = 0; i < parameters.length; ++i) {
-					result[i] = conn2nd[i][j][k].apply(undefined, coord);
-				}
-				return result;
-			};
-			
-			//process TeX
-			var symbols = ['theta', 'phi', 'rho', 'gamma', 'Gamma'];
-			$.each(symbols, function(i,sym) {
-				propertiesHTML = propertiesHTML.replace(new RegExp(sym, 'g'), '\\'+sym);
 			});
-			$('#properties').html(propertiesHTML);
-			MathJax.Hub.Queue(["Typeset", MathJax.Hub, "properties"]);
-			
-			reset();	//regenerate mesh
+
+			return resultFunction;
 		};
-		//wait for done lua loading
-		var loadingInterval = setInterval(function() {
-			if (luaDoneLoading) {
-				clearInterval(loadingInterval);
-				doUpdateEquations();
+
+		//compile equations here
+		let coordCallbacks = [];	//coordCallbacks[xyz]
+		let coordDerivs = [];		//coordDerivs[xyz][uv|normal]
+		let metric = [];			//metric[uv][uv] = g_ij = e_i dot e_j
+		let metricEqn = [];
+		let invMetricEqn = [];		//invMetricEqn[uv][uv] = g^ij
+		let diffMetricEqn = [];		//diffMetricEqn[uv][uv][uv] = g_ij,k
+		let conn1stEqn = [];		//conn1stEqn[uv][uv][uv] = conn_ijk = 1/2 (g_ij,k + g_ik,j - g_jk,i)
+		let conn2nd = [];			//conn2nd[uv][uv][uv] = conn^i_jk = g^il * conn_ljk
+		let conn2ndEqn = [];
+		console.log('generating coordinate chart functions...');
+		let failed = false;
+		let equations = [];
+		for (let i = 0; i < coordLabels.length; ++i) {
+			equations[i] = ids['equation'+coordLabels[i].toUpperCase()].value;
+		}
+		try {
+			//get functions
+			equations.forEach((eqn,i) => {
+				coordCallbacks[i] = luaEqnToJSFunc(eqn, parameters.join(', '), coordLabels[i]);
+				coordDerivs[i] = [];
+			});
+			equations.forEach((eqn,i) => {
+				parameters.forEach((param,j) => {
+					coordDerivs[i][j] = luaEqnToJSFunc('diff('+eqn+', '+param+')', parameters.join(', '), '{{d'+coordLabels[i]+'} \\over {d'+param+'}}');
+				});
+			});
+
+			//get metric and its derivative 
+			parameters.forEach((u,i) => {
+				metric[i] = [];
+				metricEqn[i] = [];
+				diffMetricEqn[i] = [];
+				parameters.forEach((v,j) => {
+					let sum = [];
+					equations.forEach((eqn,k) => {
+						sum.push('diff('+eqn+', '+u+') * diff('+eqn+', '+v+')');
+					});
+					metricEqn[i][j] = sum.join(' + ');
+					metric[i][j] = luaEqnToJSFunc(metricEqn[i][j], parameters.join(', '), 'g_{'+u+' '+v+'}');
+					diffMetricEqn[i][j] = [];
+					parameters.forEach((w,k) => {
+						diffMetricEqn[i][j][k] = 'diff('+metricEqn[i][j]+', '+w+')';
+					});
+				});
+			});
+
+			//inverse metric
+			if (parameters.length != 2) throw 'only works with two parameters';
+			let metricDetEqn = '('+metricEqn[0][0]+') * ('+metricEqn[1][1]+') - ('+metricEqn[1][0]+') * ('+metricEqn[0][1]+')';
+			let invMetricEqn = [
+				[	'('+metricEqn[1][1]+') / ('+metricDetEqn+')',	//00
+					'-('+metricEqn[0][1]+') / ('+metricDetEqn+')'],	//01
+				[	'-('+metricEqn[1][0]+') / ('+metricDetEqn+')',	//10
+					'('+metricEqn[0][0]+') / ('+metricDetEqn+')']
+			];
+
+			//1st conns
+			parameters.forEach((u,i) => {
+				conn1stEqn[i] = [];
+				parameters.forEach((v,j) => {
+					conn1stEqn[i][j] = [];
+					parameters.forEach((w,k) => {
+						conn1stEqn[i][j][k] = '1/2 * ('+diffMetricEqn[i][j][k]+' + '+diffMetricEqn[i][k][j]+' - '+diffMetricEqn[j][k][i]+')';
+					});
+				});
+			});
+
+			//2nd conns
+			parameters.forEach((u,i) => {
+				conn2nd[i] = [];
+				conn2ndEqn[i] = [];
+				parameters.forEach((v,j) => {
+					conn2nd[i][j] = [];
+					conn2ndEqn[i][j] = [];
+					parameters.forEach((w,k) => {
+						let sum = [];
+						for (let l = 0; l < parameters.length; ++l) {
+							sum.push('('+invMetricEqn[i][l]+') * ('+conn1stEqn[l][j][k]+')');
+						}
+						conn2ndEqn[i][j][k] = sum.join(' + ');
+						conn2nd[i][j][k] = luaEqnToJSFunc(conn2ndEqn[i][j][k], parameters.join(', '), '{Gamma^'+u+'}_{'+v+' '+w+'}');
+					});
+				});
+			});
+			
+			//get normal
+			equations.forEach((eqn,i) => {
+				let j = (i+1)%equations.length;
+				let k = (j+1)%equations.length;
+				let dj_du = coordDerivs[j][0];
+				let dk_du = coordDerivs[k][0];
+				let dj_dv = coordDerivs[j][1];
+				let dk_dv = coordDerivs[k][1];
+				coordDerivs[i][2] = function() { 
+					return dj_du.apply(undefined, arguments) 
+						* dk_dv.apply(undefined, arguments) 
+						- dk_du.apply(undefined,arguments) 
+						* dj_dv.apply(undefined,arguments);
+				};
+			});
+		} catch (e) {
+			console.log("failed: ", e);
+			failed = true;
+		}
+		if (failed) {
+			//color the failed input textarea red
+			allInputs.forEach((input,i) => {
+				input.css({background:'rgb(255,127,127)'});
+			});
+			return;
+		} else {
+			allInputs.forEach((input,i) => {
+				input.css({background:'white'});
+			});
+		}
+		currentCoordChart.mapping = function(coord) {
+			let result = [];
+			for (let k = 0; k < coordLabels.length; ++k) {
+				result[k] = coordCallbacks[k].apply(undefined, coord);
 			}
-		}, 100);
+			return result;
+		};
+		currentCoordChart.diff = function(coord, dim) {
+			let result = [];
+			for (let k = 0; k < coordLabels.length; ++k) {
+				result[k] = coordDerivs[k][dim].apply(undefined, coord);
+			}
+			return result;
+		};
+		currentCoordChart.unitDiff = function(coord, dim) {
+			let diff = this.diff(coord, dim);
+			let len = vec3.length(diff);
+			return [diff[0] / len, diff[1] / len, diff[2] / len];
+		};
+		currentCoordChart.connection = function(coord, k, j) {
+			let result = [];
+			for (let i = 0; i < parameters.length; ++i) {
+				result[i] = conn2nd[i][j][k].apply(undefined, coord);
+			}
+			return result;
+		};
 		
+		//process TeX
+		let symbols = ['theta', 'phi', 'rho', 'gamma', 'Gamma'];
+		symbols.forEach((sym,i) => {
+			propertiesHTML = propertiesHTML.replace(new RegExp(sym, 'g'), '\\'+sym);
+		});
+		ids.properties.innerHTML = propertiesHTML;
+		MathJax.Hub.Queue(["Typeset", MathJax.Hub, "properties"]);
+		
+		reset();	//regenerate mesh
 	};
-
-	var delayToUpdateEquations = undefined;
-	(function(){
-		var updateInterval = undefined;
-		delayToUpdateEquations = function() {
-			if (updateInterval !== undefined) {
-				clearInterval(updateInterval);
-			}
-			updateInterval = setTimeout(function() {
-				updateEquations();
-			}, 1000);
-		};
-	})();
-
-	$.each(allInputs, function(i,input) {
-		input
-			.on('change', delayToUpdateEquations)
-			.on('keypress', delayToUpdateEquations)
-			.on('paste', delayToUpdateEquations)
-			.on('input', delayToUpdateEquations)
-		;
-	});
-
-	$.each(coordCharts, function(name,coordChart) {
-		var option = $('<option>', {
-			text : name,
-			value : name
-		}).appendTo($('#coordinateSystem'));
-		if (coordChart[name] == currentCoordChart) option.attr('selected', 'selected');
-	});
-	$('#coordinateSystem').change(function() {
-		selectCoordChart($(this).val());
-	});
-	function selectCoordChart(name) {
-		currentCoordChart = coordCharts[name];
-		$.each(coordLabels, function(i,x) { $('#equation'+x.toUpperCase()).val('0'); });
-		if (currentCoordChart.equations !== undefined) {
-			$.each(currentCoordChart.equations, function(i,equation) {
-				$('#equation'+coordLabels[i].toUpperCase()).val(equation);
-			});
+	//wait for done lua loading
+	let loadingInterval = setInterval(function() {
+		if (luaDoneLoading) {
+			clearInterval(loadingInterval);
+			doUpdateEquations();
 		}
-		$('#parameters').val(currentCoordChart.parameters.join(', '));
-		$('#constants').val('');
-		if (currentCoordChart.constants !== undefined) {
-			var constantText = [];
-			$.each(currentCoordChart.constants, function(k,v) {
-				constantText.push(k+'='+v);
-			});
-			if (constantText.length > 0) {
-				$('#constants').val(constantText.concat());
-			}
+	}, 100);
+	
+};
+
+let delayToUpdateEquations = undefined;
+(function(){
+	let updateInterval = undefined;
+	delayToUpdateEquations = function() {
+		if (updateInterval !== undefined) {
+			clearInterval(updateInterval);
 		}
-		updateEquations();
+		updateInterval = setTimeout(function() {
+			updateEquations();
+		}, 1000);
+	};
+})();
+
+allInputs.forEach((input,i) => {
+	input.addEventListener('change', delayToUpdateEquations);
+	input.addEventListener('keypress', delayToUpdateEquations);
+	input.addEventListener('paste', delayToUpdateEquations);
+	input.addEventListener('input', delayToUpdateEquations);
+});
+
+Object.entries(coordCharts).forEach(entry => {
+	const [name,coordChart] = entry;
+	const option = DOM('option', {
+		text : name,
+		value : name,
+		appendTo : ids.coordinateSystem,
+	});
+	if (coordChart[name] == currentCoordChart) option.setAttribute('selected', 'selected');
+});
+ids.coordinateSystem.addEventListener('change', e => {
+	selectCoordChart(ids.coordinateSystem.value);
+});
+function selectCoordChart(name) {
+	currentCoordChart = coordCharts[name];
+	coordLabels.forEach((x,i) => { ids['equation'+x.toUpperCase()].value = '0'; });
+	if (currentCoordChart.equations !== undefined) {
+		currentCoordChart.equations.forEach((equation,i) => {
+			ids['equation'+coordLabels[i].toUpperCase()].value = equation;
+		});
 	}
-
-	var tmpQ = quat.create();	
-	mouse = new Mouse3D({
-		pressObj : canvas,
-		move : function(dx,dy) {
-			if (inputState == 'select') {
-				var bestCoord = findClickedCoord();
-			
-				if (bestCoord !== undefined) {
-					selectCoord(bestCoord);
-				}
-			}
-			
-			if (inputState == 'rotate') {
-				var rotAngle = Math.PI / 180 * .03 * Math.sqrt(dx*dx + dy*dy);
-				quat.setAxisAngle(tmpQ, [dy, dx, 0], rotAngle);
-
-				quat.mul(sceneObj.angle, tmpQ, sceneObj.angle);
-				quat.normalize(sceneObj.angle, sceneObj.angle);
-			}
-
-			if (inputState == 'direction') {
-				//re-integrate geodesic and uncorrected coordinates along surface
-				var clickedCoord = findClickedCoord();
-				if (clickedCoord !== undefined) {
-					var mappedCurrentCoord = currentCoordChart.mapping(currentCoord);
-					//TODO
-					//rotate view ray and origin by inverse angle
-					//intersect view ray with plane of surface normal and mapped coordinate
-					
-					
-					var mappedClickedCoord = currentCoordChart.mapping(clickedCoord);
-					var delta = [
-						mappedClickedCoord[0] - mappedCurrentCoord[0],
-						mappedClickedCoord[1] - mappedCurrentCoord[1],
-						mappedClickedCoord[2] - mappedCurrentCoord[2]
-					];
-					var invAngle = quat.create();
-					quat.conjugate(invAngle, glutil.view.angle);
-					vec3.transformQuat(delta, delta, invAngle);
-					var basis0 = currentCoordChart.unitDiff(currentCoord, 0);
-					var basis1 = currentCoordChart.unitDiff(currentCoord, 1);
-					var d0 = vec3.dot(basis0, delta);
-					var d1 = vec3.dot(basis1, delta);
-					var dl = vec2.length([d0, d1]); 
-					chooseDirection([d0/dl, d1/dl]);
-				}
-			}
-		},
-		zoom : function(dz) {
-			glutil.view.pos[2] += .0001 * dz;
-		}
-	});
-
-	var offset = [ [0,0], [1,0], [1,1], [1,1], [0,1], [0,0] ];
-	var indexes = [];
-	for (var itheta = 0; itheta < intDivs[0]-1; ++itheta) {
-		for (var iphi = 0; iphi < intDivs[1]-1; ++iphi) {
-			for (var k = 0; k < offset.length; ++k) {
-				indexes.push(
-					iphi + offset[k][0] + (itheta + offset[k][1]) * intDivs[1] 
-				);
-			}
+	ids.parameters.value = currentCoordChart.parameters.join(', ');
+	ids.constants.value = '';
+	if (currentCoordChart.constants !== undefined) {
+		let constantText = [];
+		Object.entries(currentCoordChart.constants).forEach(entry => {
+			const [k,v] = entry;
+			constantText.push(k+'='+v);
+		});
+		if (constantText.length > 0) {
+			ids.constants.value = constantText.concat();
 		}
 	}
+	updateEquations();
+}
 
-	glutil.view.pos[2] = 2;
-	glutil.view.zFar = 100;
-	glutil.view.zNear = .1;
-	var plainShader = new glutil.ShaderProgram({
-		vertexPrecision : 'best',
-		vertexCode : mlstr(function(){/*
-attribute vec3 vertex;
+let tmpQ = quat.create();	
+mouse = new Mouse3D({
+	pressObj : canvas,
+	move : function(dx,dy) {
+		if (inputState == 'select') {
+			let bestCoord = findClickedCoord();
+		
+			if (bestCoord !== undefined) {
+				selectCoord(bestCoord);
+			}
+		}
+		
+		if (inputState == 'rotate') {
+			let rotAngle = Math.PI / 180 * .03 * Math.sqrt(dx*dx + dy*dy);
+			quat.setAxisAngle(tmpQ, [dy, dx, 0], rotAngle);
+
+			quat.mul(sceneObj.angle, tmpQ, sceneObj.angle);
+			quat.normalize(sceneObj.angle, sceneObj.angle);
+		}
+
+		if (inputState == 'direction') {
+			//re-integrate geodesic and uncorrected coordinates along surface
+			let clickedCoord = findClickedCoord();
+			if (clickedCoord !== undefined) {
+				let mappedCurrentCoord = currentCoordChart.mapping(currentCoord);
+				//TODO
+				//rotate view ray and origin by inverse angle
+				//intersect view ray with plane of surface normal and mapped coordinate
+				
+				
+				let mappedClickedCoord = currentCoordChart.mapping(clickedCoord);
+				let delta = [
+					mappedClickedCoord[0] - mappedCurrentCoord[0],
+					mappedClickedCoord[1] - mappedCurrentCoord[1],
+					mappedClickedCoord[2] - mappedCurrentCoord[2]
+				];
+				let invAngle = quat.create();
+				quat.conjugate(invAngle, glutil.view.angle);
+				vec3.transformQuat(delta, delta, invAngle);
+				let basis0 = currentCoordChart.unitDiff(currentCoord, 0);
+				let basis1 = currentCoordChart.unitDiff(currentCoord, 1);
+				let d0 = vec3.dot(basis0, delta);
+				let d1 = vec3.dot(basis1, delta);
+				let dl = vec2.length([d0, d1]); 
+				chooseDirection([d0/dl, d1/dl]);
+			}
+		}
+	},
+	zoom : function(dz) {
+		glutil.view.pos[2] += .0001 * dz;
+	}
+});
+
+let offset = [ [0,0], [1,0], [1,1], [1,1], [0,1], [0,0] ];
+let indexes = [];
+for (let itheta = 0; itheta < intDivs[0]-1; ++itheta) {
+	for (let iphi = 0; iphi < intDivs[1]-1; ++iphi) {
+		for (let k = 0; k < offset.length; ++k) {
+			indexes.push(
+				iphi + offset[k][0] + (itheta + offset[k][1]) * intDivs[1] 
+			);
+		}
+	}
+}
+
+glutil.view.pos[2] = 2;
+glutil.view.zFar = 100;
+glutil.view.zNear = .1;
+let plainShader = new glutil.Program({
+	vertexCode : `
+in vec3 vertex;
 uniform mat4 projMat;
 uniform mat4 mvMat;
 void main() {
 	gl_Position = projMat * mvMat * vec4(vertex, 1.);
 }
-*/}),
-		fragmentPrecision : 'best',
-		fragmentCode : mlstr(function(){/*
+`,
+	fragmentCode : `
 uniform vec4 color;
+out vec4 fragColor;
 void main() {
-	gl_FragColor = color;
+	fragColor = color;
 }
-*/})
-	});
-	var meshShader = new glutil.ShaderProgram({
-		vertexPrecision : 'best',
-		vertexCode : mlstr(function(){/*
-attribute vec3 vertex;
-attribute vec2 intCoord;
-attribute vec3 normal;
+`
+});
+let meshShader = new glutil.Program({
+	vertexCode : `
+in vec3 vertex;
+in vec2 intCoord;
+in vec3 normal;
 uniform mat4 projMat;
 uniform mat4 mvMat;
-varying vec2 intCoordV;
-varying vec3 normalV;
-varying vec3 vertexV;
+out vec2 intCoordV;
+out vec3 normalV;
+out vec3 vertexV;
 void main() {
 	normalV = (mvMat * vec4(normal, 0.)).xyz;
 	vec4 mvtx = mvMat * vec4(vertex, 1.);
@@ -840,13 +855,13 @@ void main() {
 	gl_Position = projMat * mvtx;
 	intCoordV = intCoord;
 }
-*/}),
-		fragmentPrecision : 'best',
-		fragmentCode : mlstr(function(){/*
+`,
+	fragmentCode : `
 uniform vec4 color;
-varying vec2 intCoordV;
-varying vec3 normalV;
-varying vec3 vertexV;
+in vec2 intCoordV;
+in vec3 normalV;
+in vec3 vertexV;
+out vec4 fragColor;
 void main() {
 	vec3 n = normalize(normalV);
 	if (n.z < 0.) n = -n;	//backface lighting
@@ -855,82 +870,100 @@ void main() {
 	float i = 1. - 8. * fc.x * fc.y * (1. - fc.x) * (1. - fc.y);
 	i = pow(i, 50.);
 	
-	gl_FragColor = vec4(.25, .5, .5, 1.);
-	gl_FragColor.rgb *= 1. - i;
+	fragColor = vec4(.25, .5, .5, 1.);
+	fragColor.rgb *= 1. - i;
 	vec3 u = normalize(vertexV);
 	float l = dot(n, u);
-	gl_FragColor.rgb *= max(abs(l), .3);
+	fragColor.rgb *= max(abs(l), .3);
 }
-*/})
-	});
-	sceneObj = new glutil.SceneObject({
-		static : false
-	});
+`
+});
+sceneObj = new glutil.SceneObject({
+	static : false
+});
 
-	meshObj = new glutil.SceneObject({
-		parent : sceneObj,
-		mode : gl.TRIANGLES,
-		attrs : {
-			vertex : new glutil.ArrayBuffer({
-				count : intDivs[0] * intDivs[1],
-				usgae : gl.DYNAMIC_DRAW
-			}),
-			coord : new glutil.ArrayBuffer({
-				dim : 2,
-				count : intDivs[0] * intDivs[1]
-			}),
-			intCoord : new glutil.ArrayBuffer({
-				dim : 2,
-				count : intDivs[0] * intDivs[1],
-				usage : gl.DYNAMIC_DRAW
-			}),
-			normal : new glutil.ArrayBuffer({
-				count : intDivs[0] * intDivs[1],
-				usage : gl.DYNAMIC_DRAW
-			})
-		},
-		indexes : new glutil.ElementArrayBuffer({
-			data : new Uint16Array(indexes)
+meshObj = new glutil.SceneObject({
+	parent : sceneObj,
+	mode : gl.TRIANGLES,
+	attrs : {
+		vertex : new glutil.ArrayBuffer({
+			count : intDivs[0] * intDivs[1],
+			usgae : gl.DYNAMIC_DRAW
 		}),
-		uniforms : {
-			color : [1,1,1,1]
-		},
-		shader : meshShader,
-		static : false
-	});
-	
-	selectionObj = new glutil.SceneObject({
+		coord : new glutil.ArrayBuffer({
+			dim : 2,
+			count : intDivs[0] * intDivs[1]
+		}),
+		intCoord : new glutil.ArrayBuffer({
+			dim : 2,
+			count : intDivs[0] * intDivs[1],
+			usage : gl.DYNAMIC_DRAW
+		}),
+		normal : new glutil.ArrayBuffer({
+			count : intDivs[0] * intDivs[1],
+			usage : gl.DYNAMIC_DRAW
+		})
+	},
+	indexes : new glutil.ElementArrayBuffer({
+		data : new Uint16Array(indexes)
+	}),
+	uniforms : {
+		color : [1,1,1,1]
+	},
+	shader : meshShader,
+	static : false
+});
+
+selectionObj = new glutil.SceneObject({
+	parent : sceneObj,
+	mode : gl.LINE_LOOP,
+	attrs : {
+		vertex : new glutil.ArrayBuffer({
+			usage : gl.DYNAMIC_DRAW,
+			count : selectionRes
+		})
+	},
+	uniforms : {
+		color : [1,1,1,1]
+	},
+	shader : plainShader,
+	static : false
+});
+
+let basisColors = [
+	[1,0,0,1],
+	[0,1,0,1]
+];
+let connColors = [
+	[
+		[1,1,0,1],
+		[0,1,1,1]
+	],
+	[
+		[1,0,1,1],
+		[1,.5,0,1]
+	]
+];
+for (let i = 0; i < 2; ++i) {
+	basisObjs[i] = new glutil.SceneObject({
 		parent : sceneObj,
-		mode : gl.LINE_LOOP,
+		mode : gl.LINES,
 		attrs : {
 			vertex : new glutil.ArrayBuffer({
-				usage : gl.DYNAMIC_DRAW,
-				count : selectionRes
+				count : 2,
+				usage : gl.DYNAMIC_DRAW
 			})
 		},
 		uniforms : {
-			color : [1,1,1,1]
+			color : basisColors[i]
 		},
 		shader : plainShader,
 		static : false
 	});
-
-	var basisColors = [
-		[1,0,0,1],
-		[0,1,0,1]
-	];
-	var connColors = [
-		[
-			[1,1,0,1],
-			[0,1,1,1]
-		],
-		[
-			[1,0,1,1],
-			[1,.5,0,1]
-		]
-	];
-	for (var i = 0; i < 2; ++i) {
-		basisObjs[i] = new glutil.SceneObject({
+	/*
+	connObjs[i] = [];
+	for (let j = 0; j < 2; ++j) {
+		connObjs[i][j] = new glutil.SceneObject({
 			parent : sceneObj,
 			mode : gl.LINES,
 			attrs : {
@@ -940,70 +973,51 @@ void main() {
 				})
 			},
 			uniforms : {
-				color : basisColors[i]
+				color : connColors[i][j]
 			},
 			shader : plainShader,
 			static : false
 		});
-		/*
-		connObjs[i] = [];
-		for (var j = 0; j < 2; ++j) {
-			connObjs[i][j] = new glutil.SceneObject({
-				parent : sceneObj,
-				mode : gl.LINES,
-				attrs : {
-					vertex : new glutil.ArrayBuffer({
-						count : 2,
-						usage : gl.DYNAMIC_DRAW
-					})
-				},
-				uniforms : {
-					color : connColors[i][j]
-				},
-				shader : plainShader,
-				static : false
-			});
-		}
-		*/
 	}
+	*/
+}
 
-	partialPathObj = new glutil.SceneObject({
-		parent : sceneObj,
-		mode : gl.LINE_STRIP,
-		attrs : {
-			vertex : new glutil.ArrayBuffer({
-				count : pathLength,
-				usage : gl.DYNAMIC_DRAW
-			})
-		},
-		uniforms : {
-			color : [1,1,0,1]
-		},
-		shader : plainShader,
-		static : false
-	});
-	geodesicPathObj = new glutil.SceneObject({
-		parent : sceneObj,
-		mode : gl.LINE_STRIP,
-		attrs : {
-			vertex : new glutil.ArrayBuffer({
-				count : pathLength,
-				usage : gl.DYNAMIC_DRAW
-			})
-		},
-		uniforms : {
-			color : [1,0,1,1]
-		},
-		shader : plainShader,
-		static : false
-	});
-
-	gl.enable(gl.DEPTH_TEST);
-
-	selectCoordChart('Spherical');	
-	
-	$(window).resize(resize);
-	resize();
-	
-	update();
+partialPathObj = new glutil.SceneObject({
+	parent : sceneObj,
+	mode : gl.LINE_STRIP,
+	attrs : {
+		vertex : new glutil.ArrayBuffer({
+			count : pathLength,
+			usage : gl.DYNAMIC_DRAW
+		})
+	},
+	uniforms : {
+		color : [1,1,0,1]
+	},
+	shader : plainShader,
+	static : false
 });
+geodesicPathObj = new glutil.SceneObject({
+	parent : sceneObj,
+	mode : gl.LINE_STRIP,
+	attrs : {
+		vertex : new glutil.ArrayBuffer({
+			count : pathLength,
+			usage : gl.DYNAMIC_DRAW
+		})
+	},
+	uniforms : {
+		color : [1,0,1,1]
+	},
+	shader : plainShader,
+	static : false
+});
+
+gl.enable(gl.DEPTH_TEST);
+
+selectCoordChart('Spherical');	
+
+window.addEventListener('resize', resize);
+resize();
+
+update();
