@@ -19,11 +19,13 @@ MathJax = {
 };
 </script>
 		<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+		<script type='text/javascript' src='/js/lua.vm.js'/></script>
 		<script type='module' src='main.js' defer></script>
 		<style type='text/css'>
 ::-webkit-scrollbar {
 	display:none;
-}	
+}
 		</style>
 
 	</head>
@@ -32,7 +34,7 @@ MathJax = {
 			<img id='panelButton' src='menu.png' style='padding:5px'/>
 			<button id='infoButton' style='background-color:black; color:white; width:24px; height:24px; border:1px solid white; cursor:pointer; display:table-cell; align:center; vertical-align:top; margin:5px'>?</button><br>
 		</div>
-		
+
 		<div id='panel' style='overflow-x:visible; overflow-y:scroll; z-index:1; position:absolute; top:32px; display:none; width:300px'>
 			<br>
 			Tools:<br>
@@ -59,7 +61,7 @@ MathJax = {
 				</div>
 			</div>
 		</div>
-			
+
 		<div id='info' style='display:none; overflow:scroll; top:32px; z-index:1; position:absolute; background-color:rgba(255,255,255,.85); color:black; padding:10px'>
 			coordinate system \( x_i \)<br>
 			vector basis: \( \textbf{e}_j = {e_j}^{\hat k}\)<br>
@@ -68,8 +70,8 @@ MathJax = {
 			contravariant representation \( {\textbf v} = v^i {\textbf e}_i \)<br>
 			covariant representation \( \textbf{w} = w_i \boldsymbol{\omega}^i \)<br>
 			orthogonality of vector and one-form basis: \( \langle \boldsymbol{\omega}^i, {\textbf e}_j \rangle = \delta^i_j \)<br>
-			elements of vectors: 
-			\( \langle \boldsymbol{\omega}^i, \textbf{v} \rangle 
+			elements of vectors:
+			\( \langle \boldsymbol{\omega}^i, \textbf{v} \rangle
 				= \langle \boldsymbol{\omega}^i, v^j \textbf{e}_j \rangle
 				= v^j \langle \boldsymbol{\omega}^i, \textbf{e}_j \rangle
 				= v^j \delta^i_j
@@ -83,7 +85,7 @@ MathJax = {
 				= w_i
 			\)<br>
 			<br>
-			inner product of vector and one-form: 
+			inner product of vector and one-form:
 			\( \langle \textbf{w}, \textbf{v} \rangle
 				= \langle w_i \boldsymbol{\omega}^i, v^j \textbf{e}_j \rangle
 				= w_i v^j \langle \boldsymbol{\omega}^i, \textbf{e}_j \rangle
@@ -96,7 +98,7 @@ MathJax = {
 			outer product of vectors: \( \textbf{a} \otimes \textbf{b} = a^i \textbf{e}_i \otimes b^j \textbf{e}_j = a^i b^j \textbf{e}_i \otimes \textbf{e}_j \)<br>
 			outer product of one-forms: \( \textbf{a} \otimes \textbf{b} = a_i \boldsymbol{\omega}^i \otimes b_j \boldsymbol{\omega}^j = a_i b_j \boldsymbol{\omega}^i \otimes \boldsymbol{\omega}^j \)<br>
 			wedge product of one-form basis: \( \boldsymbol{\omega}^i \wedge \boldsymbol{\omega}^j = \boldsymbol{\omega}^i \otimes \boldsymbol{\omega}^j - \boldsymbol{\omega}^j \otimes \boldsymbol{\omega}^i \)<br>
-			wedge product of one-forms: \( \textbf{a} \wedge \textbf{b} 
+			wedge product of one-forms: \( \textbf{a} \wedge \textbf{b}
 				= a_i \boldsymbol{\omega}^i \wedge b_j \boldsymbol{\omega}^j
 				= a_i b_j \boldsymbol{\omega}^i \wedge \boldsymbol{\omega}^j
 				= a_i b_j (\boldsymbol{\omega}^i \otimes \boldsymbol{\omega}^j - \boldsymbol{\omega}^j \otimes \boldsymbol{\omega}^i)
@@ -106,9 +108,9 @@ MathJax = {
 			wedge product basis antisymmetry: \( \textbf{dx}^i \wedge \textbf{dx}^j = -\textbf{dx}^j \wedge \textbf{dx}^i \)<br>
 			wedge product antisymmetry: \( \textbf{a} \wedge \textbf{b} = (-1)^{pq} \textbf{b} \wedge \textbf{a} \) for p-form \(\textbf{a}\) and q-form \(\textbf{b}\).<br>
 			<br>
-			commutation coefficients: 
-			\( [\textbf{e}_i, \textbf{e}_j] 
-				= \boldsymbol{\nabla}_{\textbf{e}_i} \textbf{e}_j - \boldsymbol{\nabla}_{\textbf{e}_j} \textbf{e}_i 
+			commutation coefficients:
+			\( [\textbf{e}_i, \textbf{e}_j]
+				= \boldsymbol{\nabla}_{\textbf{e}_i} \textbf{e}_j - \boldsymbol{\nabla}_{\textbf{e}_j} \textbf{e}_i
 				= \nabla_i \textbf{e}_j - \nabla_j \textbf{e}_i
 				= {c_{ij}}^k \textbf{e}_k
 			\)<br>
@@ -116,8 +118,8 @@ MathJax = {
 			<br>
 			A basis is <i>holonomic</i> when all \( {c_{ij}}^k = 0 \).<br>
 			This coincides with when \( \textbf{e}_i = {\partial \over {\partial x^i}} \) such that \( [\textbf{e}_i, \textbf{e}_j] = \left [ {\partial \over {\partial x^i}}, {\partial \over {\partial x^j}} \right ] = 0 \).  Subsequently \( \boldsymbol{\omega}^i = \textbf{dx}^i \).<br>
-			A basis that does not meet this condition is considered <i>anholonomic</i>.<br> 
-			<br>	
+			A basis that does not meet this condition is considered <i>anholonomic</i>.<br>
+			<br>
 			metric: \( g_{ij} = {\textbf e}_i \cdot {\textbf e}_j \)<br>
 			metric inverse: \( ||g^{ij}|| = \) inverse of \( ||g_{ij}|| \) such that \( g^{ik} g_{kj} = \delta^i_j \)<br>
 			metric symmetry: \( g_{ij} = \textbf{e}_i \cdot \textbf{e}_j = \textbf{e}_j \cdot \textbf{e}_i = g_{ji} \)<br>
@@ -135,31 +137,31 @@ MathJax = {
 			<br>
 			covariant derivative: \( \boldsymbol{\nabla} \)<br>
 			covariant derivative per component: \( \boldsymbol{\nabla} = \nabla_i \boldsymbol{\omega}^i \)<br>
-			covariant derivative of scalar: 
-			\( \boldsymbol{\nabla} \phi 
-				= \nabla_i \phi \boldsymbol{\omega}^i 
+			covariant derivative of scalar:
+			\( \boldsymbol{\nabla} \phi
+				= \nabla_i \phi \boldsymbol{\omega}^i
 				= \partial_i \phi \boldsymbol{\omega}^i
 			\)<br>
-			covariant derivative of inner product: 
-			\( \boldsymbol{\nabla} \langle \textbf{a}, \textbf{b} \rangle 
+			covariant derivative of inner product:
+			\( \boldsymbol{\nabla} \langle \textbf{a}, \textbf{b} \rangle
 				= \langle \boldsymbol{\nabla} \textbf{a}, \textbf{b} \rangle + \langle \textbf{a}, \boldsymbol{\nabla} \textbf{b} \rangle
 			\)<br>
-			covariant derivative of dot product: 
-			\( \boldsymbol{\nabla} ( \textbf{a} \cdot \textbf{b} ) 
+			covariant derivative of dot product:
+			\( \boldsymbol{\nabla} ( \textbf{a} \cdot \textbf{b} )
 				= (\boldsymbol{\nabla} \textbf{a}) \cdot \textbf{b} + \textbf{a} \cdot (\boldsymbol{\nabla} \textbf{b})
 			\)<br>
-			covariant derivative of outer product: 
-			\( \boldsymbol{\nabla} ( \textbf{a} \otimes \textbf{b} ) 
+			covariant derivative of outer product:
+			\( \boldsymbol{\nabla} ( \textbf{a} \otimes \textbf{b} )
 				= (\boldsymbol{\nabla} \textbf{a}) \otimes \textbf{b} + \textbf{a} \otimes (\boldsymbol{\nabla} \textbf{b})
 			\)<br>
 			<br>
-			\( 0 
-				= \nabla_k \delta^i_j 
-				= \nabla_k \langle \boldsymbol{\omega}^i, {\textbf e}_j \rangle 
-				= \langle \nabla_k \boldsymbol{\omega}^i, {\textbf e}_j \rangle + \langle \boldsymbol{\omega}^i, \nabla_k {\textbf e}_j \rangle 
+			\( 0
+				= \nabla_k \delta^i_j
+				= \nabla_k \langle \boldsymbol{\omega}^i, {\textbf e}_j \rangle
+				= \langle \nabla_k \boldsymbol{\omega}^i, {\textbf e}_j \rangle + \langle \boldsymbol{\omega}^i, \nabla_k {\textbf e}_j \rangle
 			\)<br>
 			so \(
-				\langle \nabla_k \boldsymbol{\omega}^i, {\textbf e}_j \rangle = - \langle \boldsymbol{\omega}^i, \nabla_k {\textbf e}_j \rangle 
+				\langle \nabla_k \boldsymbol{\omega}^i, {\textbf e}_j \rangle = - \langle \boldsymbol{\omega}^i, \nabla_k {\textbf e}_j \rangle
 			\)<br>
 			let \( \langle \boldsymbol{\omega}^i, \nabla_k {\textbf e}_j \rangle = {\Gamma^i}_{jk} \)<br>
 			so \( \langle \nabla_k \boldsymbol{\omega}^i, {\textbf e}_j \rangle = -{\Gamma^i}_{jk} \)<br>
@@ -167,9 +169,9 @@ MathJax = {
 			covariant derivative of vector basis: \( \langle \nabla_k {\textbf e}_j, \boldsymbol{\omega}^i \rangle = {\Gamma^i}_{jk} \), so \( \nabla_k {\textbf e}_j = {\Gamma^i}_{jk} {\textbf e}_i \)<br>
 			covariant derivative of one-form basis: \( -\langle \nabla_k \boldsymbol{\omega}^i, {\textbf e}_j \rangle = {\Gamma^i}_{jk} \), so \( \nabla_k \boldsymbol{\omega}^i = -{\Gamma^i}_{jk} \boldsymbol{\omega}^j \)<br>
 			<br>
-			covariant derivative of vector: 
-			\( \boldsymbol{\nabla} \textbf{v} 
-				= \nabla_j \textbf{v} \otimes \boldsymbol{\omega}^j 
+			covariant derivative of vector:
+			\( \boldsymbol{\nabla} \textbf{v}
+				= \nabla_j \textbf{v} \otimes \boldsymbol{\omega}^j
 				= \nabla_j (v^i \textbf{e}_i) \otimes \boldsymbol{\omega}^j
 				= (\nabla_j v^i \textbf{e}_i + v^i \nabla_j \textbf{e}_i) \otimes \boldsymbol{\omega}^j
 				= (\partial_j v^k + v^i {\Gamma^k}_{ji}) \textbf{e}_k \otimes \boldsymbol{\omega}^j
@@ -177,26 +179,26 @@ MathJax = {
 			covariant derivative of vector in index notation: \( \nabla_i v^j = \partial_i v^j + {\Gamma^j}_{ki} v^k \)<br>
 			<br>
 			covariant derivative of one-form:
-			\( \boldsymbol{\nabla} \textbf{w} 
+			\( \boldsymbol{\nabla} \textbf{w}
 				= \nabla_j \textbf{w} \otimes \boldsymbol{\omega}^j
 				= \nabla_j (w_i \boldsymbol{\omega}^i) \otimes \boldsymbol{\omega}^j
 				= (\nabla_j w_i \boldsymbol{\omega}^i + w_i \nabla_j \boldsymbol{\omega}^i) \otimes \boldsymbol{\omega}^j
-				= (\partial_j w_k - {\Gamma^k}_{ji} w_i ) \boldsymbol{\omega}^k \otimes \boldsymbol{\omega}^j 
+				= (\partial_j w_k - {\Gamma^k}_{ji} w_i ) \boldsymbol{\omega}^k \otimes \boldsymbol{\omega}^j
 			\)<br>
 			covariant derivative of one-form in index notation: \( \nabla_i w_j = \partial_i w_j - {\Gamma^k}_{ji} w_k \)<br>
 			<br>
 			This is where we see that in index notation \( \nabla_k \) treats \( v^i \) as a vector due to its raised index, while in object notation \( \nabla_k \) treats \( v^i \) as a scalars of the \( \textbf{e}_i \) vector.<br>
 			<br>
-			covariant derivative of metric in index notation: 
-			\( \nabla_k g_{ij} 
-				= \partial_k g_{ij} - {\Gamma^l}_{ik} g_{lj} - {\Gamma^l}_{jk} g_{il} 
-				= \partial_k g_{ij} - \Gamma_{jik} - \Gamma_{ijk} 
-				= \partial_k g_{ij} - \partial_k g_{ij} 
-				= 0 
+			covariant derivative of metric in index notation:
+			\( \nabla_k g_{ij}
+				= \partial_k g_{ij} - {\Gamma^l}_{ik} g_{lj} - {\Gamma^l}_{jk} g_{il}
+				= \partial_k g_{ij} - \Gamma_{jik} - \Gamma_{ijk}
+				= \partial_k g_{ij} - \partial_k g_{ij}
+				= 0
 			\)<br>
 			<br>
-			covariant vector derivative: 
-			\( \nabla_{\textbf{u}} \textbf{v} 
+			covariant vector derivative:
+			\( \nabla_{\textbf{u}} \textbf{v}
 				= \textbf{u} \cdot \boldsymbol{\nabla} \textbf{v}
 				= u^i \textbf{e}_i \cdot \nabla_j v^k \textbf{e}_k \otimes \boldsymbol{\omega}^j
 				= u^i \textbf{e}_i \cdot (\partial_j v^k + v^l {\Gamma^k}_{jl}) \textbf{e}_k \otimes \boldsymbol{\omega}^j
@@ -204,7 +206,7 @@ MathJax = {
 				= u^i (\partial_j v^k + v^l {\Gamma^k}_{jl}) g_{ik} \boldsymbol{\omega}^j
 				= u_k (\partial_j v^k + v^i {\Gamma^k}_{ji}) \boldsymbol{\omega}^j
 			\)<br>
-			<br>	
+			<br>
 			Riemann curvature in terms of covariant derivative:<br>
 			\( {R^i}_{jkl} = \langle \boldsymbol{\omega}^i, (\left [ \nabla_k, \nabla_l \right ] - \nabla_{[k,l]}) \textbf{e}_j \rangle \)<br>
 			\( = \langle \boldsymbol{\omega}^i, \nabla_k \nabla_l \textbf{e}_j - \nabla_l \nabla_k \textbf{e}_j - \nabla_{[k,l]} \textbf{e}_j \rangle \)<br>
@@ -217,48 +219,48 @@ MathJax = {
 			<!-- TODO account for the disappearance of c_kl^m \partial_m v^i -->
 			<!-- TODO show nabla_k Gamma^i_jl - nabla_l Gamma^i_jk = partial_k Gamma^i_jl - partial_l Gamma^i_jk -->
 			\( (\left [ \nabla_k, \nabla_l \right ] - \nabla_{[k,l]} ) v^i \)<br>
-			\(= \nabla_k \nabla_l v^i 
+			\(= \nabla_k \nabla_l v^i
 				- \nabla_l \nabla_k v^i
 				- \nabla_{[k,l]} v^i
 			\)<br>
-			\(= \nabla_k (\partial_l v^i 
-				+ {\Gamma^i}_{jl} v^j) 
-				- \nabla_l (\partial_k v^i 
+			\(= \nabla_k (\partial_l v^i
+				+ {\Gamma^i}_{jl} v^j)
+				- \nabla_l (\partial_k v^i
 				+ {\Gamma^i}_{jk} v^j)
 				- {c_{kl}}^m \nabla_m v^i
 			\)<br>
-			\(= \nabla_k \partial_l v^i 
-				+ \nabla_k {\Gamma^i}_{jl} v^j 
-				+ {\Gamma^i}_{jl} \nabla_k v^j 
-				- \nabla_l \partial_k v^i 
-				- \nabla_l {\Gamma^i}_{jk} v^j 
+			\(= \nabla_k \partial_l v^i
+				+ \nabla_k {\Gamma^i}_{jl} v^j
+				+ {\Gamma^i}_{jl} \nabla_k v^j
+				- \nabla_l \partial_k v^i
+				- \nabla_l {\Gamma^i}_{jk} v^j
 				- {\Gamma^i}_{jk} \nabla_l v^j
 				- {c_{kl}}^m (\partial_m v^i + {\Gamma^i}_{jm} v^j)
 			\)<br>
-			\(= \partial_k \partial_l v^i 
-				- {\Gamma^m}_{lk} \partial_m v^i 
-				+ {\Gamma^i}_{mk} \partial_l v^m 
-				+ \nabla_k {\Gamma^i}_{jl} v^j 
-				+ {\Gamma^i}_{jl} \partial_k v^j 
+			\(= \partial_k \partial_l v^i
+				- {\Gamma^m}_{lk} \partial_m v^i
+				+ {\Gamma^i}_{mk} \partial_l v^m
+				+ \nabla_k {\Gamma^i}_{jl} v^j
+				+ {\Gamma^i}_{jl} \partial_k v^j
 				+ {\Gamma^i}_{jl} {\Gamma^j}_{mk} v^m
-				- \partial_l \partial_k v^i 
-				+ {\Gamma^m}_{kl} \partial_m v^i 
-				- {\Gamma^i}_{ml} \partial_k v^m 
-				- \nabla_l {\Gamma^i}_{jk} v^j 
-				- {\Gamma^i}_{jk} \partial_l v^j 
+				- \partial_l \partial_k v^i
+				+ {\Gamma^m}_{kl} \partial_m v^i
+				- {\Gamma^i}_{ml} \partial_k v^m
+				- \nabla_l {\Gamma^i}_{jk} v^j
+				- {\Gamma^i}_{jk} \partial_l v^j
 				- {\Gamma^i}_{jk} {\Gamma^j}_{ml} v^m
 				- {c_{kl}}^m \partial_m v^i
 				- {\Gamma^i}_{jm} {c_{kl}}^m v^j
 			\)<br>
-			\( = 
+			\( =
 				\partial_k \partial_l v^i - \partial_l \partial_k v^i
-				- {\Gamma^m}_{lk} \partial_m v^i 
-				+ {\Gamma^m}_{kl} \partial_m v^i 
-				+ {\Gamma^i}_{mk} \partial_l v^m 
+				- {\Gamma^m}_{lk} \partial_m v^i
+				+ {\Gamma^m}_{kl} \partial_m v^i
+				+ {\Gamma^i}_{mk} \partial_l v^m
 				- {\Gamma^i}_{jk} \partial_l v^j
-				+ {\Gamma^i}_{jl} \partial_k v^j 
+				+ {\Gamma^i}_{jl} \partial_k v^j
 				- {\Gamma^i}_{ml} \partial_k v^m
-				+ \nabla_k {\Gamma^i}_{jl} v^j - \nabla_l {\Gamma^i}_{jk} v^j 
+				+ \nabla_k {\Gamma^i}_{jl} v^j - \nabla_l {\Gamma^i}_{jk} v^j
 				+ {\Gamma^i}_{jl} {\Gamma^j}_{mk} v^m
 				- {\Gamma^i}_{jk} {\Gamma^j}_{ml} v^m
 				- {\Gamma^i}_{jm} {c_{kl}}^m v^j
@@ -283,13 +285,13 @@ MathJax = {
 			<br>
 			exterior derivative: \( \textbf{d} \)<br>
 			exchangeability of exterior and covariant derivative for 2-forms: \( \textbf{dF} = \boldsymbol{\nabla} \cdot \textbf{*F}, \textbf{d*F} = \boldsymbol{\nabla} \cdot \textbf{F} \)<br>
-			exterior derivative of scalar: 
-			\( \textbf{d}\phi 
-				= \partial_i \phi \textbf{dx}^i 
+			exterior derivative of scalar:
+			\( \textbf{d}\phi
+				= \partial_i \phi \textbf{dx}^i
 				= \partial_i \phi \boldsymbol{\omega}^i
 			\) <br>
-			exterior derivative of one-form: 
-			\( \textbf{dw} 
+			exterior derivative of one-form:
+			\( \textbf{dw}
 				= \textbf{d}(w_j \textbf{dx}^j)
 				= \textbf{d}w_j \wedge \textbf{dx}^j + w_j \textbf{d}^2\textbf{x}^j
 				= \textbf{d}w_j \wedge \textbf{dx}^j
@@ -298,27 +300,27 @@ MathJax = {
 			\)<br>
 			exterior derivative of wedge product of p-form \(\textbf{a}\) and q-form \(\textbf{b}\): \( \textbf{d} ( \textbf{a} \wedge \textbf{b} ) = \textbf{da} \wedge \textbf{b} + (-1)^p \textbf{a} \wedge \textbf{db} \)<br>
 			exterior derivative of vector as a linear relation to vector basis: \( \textbf{de}_i = \textbf{e}_k \otimes {\boldsymbol{\omega}^k}_i \)<br>
-			equating covariant and exterior derivative for vector basis: 
-			\( \textbf{de}_i 
-				= \boldsymbol{\nabla} \textbf{e}_i 
-				= {\Gamma^k}_{ij} \textbf{e}_k \otimes \boldsymbol{\omega}^j 
+			equating covariant and exterior derivative for vector basis:
+			\( \textbf{de}_i
+				= \boldsymbol{\nabla} \textbf{e}_i
+				= {\Gamma^k}_{ij} \textbf{e}_k \otimes \boldsymbol{\omega}^j
 				= \textbf{e}_k \otimes {\boldsymbol{\omega}^k}_i
 			\)<br>
 			so \( {\boldsymbol{\omega}^k}_i = {\Gamma^k}_{ij} \boldsymbol{\omega}^j \) and \( \nabla_i \boldsymbol{\omega}^k = -{\boldsymbol{\omega}^k}_i \)<br>
-			exterior derivative expanded in a contravariant basis: 
-			\( \textbf{dv} 
-				= \textbf{d} (v^i \textbf{e}_i) 
-				= \textbf{d}v^i \otimes \textbf{e}_i + v^i \textbf{de}_i 
-				= (\textbf{d}v^k + v^i {\boldsymbol{\omega}^k}_i) \otimes \textbf{e}_k 
+			exterior derivative expanded in a contravariant basis:
+			\( \textbf{dv}
+				= \textbf{d} (v^i \textbf{e}_i)
+				= \textbf{d}v^i \otimes \textbf{e}_i + v^i \textbf{de}_i
+				= (\textbf{d}v^k + v^i {\boldsymbol{\omega}^k}_i) \otimes \textbf{e}_k
 				= (\partial_j v^k + {\Gamma^k}_{ij} v^i) \boldsymbol{\omega}^j \otimes \textbf{e}_k
 			\)<br>
-			exterior derivative of inner product: 
-			\( \textbf{d}(\textbf{u} \cdot \textbf{v}) 
+			exterior derivative of inner product:
+			\( \textbf{d}(\textbf{u} \cdot \textbf{v})
 				= \textbf{du} \cdot \textbf{v} + \textbf{u} \cdot \textbf{dv}
 			\)<br>
-			exterior derivative of metric tensor: 
-			\( \textbf{d}g_{ij} 
-				= (\textbf{de}_i \cdot \textbf{e}_j) 
+			exterior derivative of metric tensor:
+			\( \textbf{d}g_{ij}
+				= (\textbf{de}_i \cdot \textbf{e}_j)
 				= \textbf{de}_i \cdot \textbf{e}_j + \textbf{e}_i \cdot \textbf{de}_j
 				= \textbf{e}_k \otimes {\boldsymbol{\omega}^k}_i \cdot \textbf{e}_j + \textbf{e}_i \cdot \textbf{e}_k \otimes {\boldsymbol{\omega}^k}_j
 				= g_{jk} {\boldsymbol{\omega}^k}_i + g_{ik} {\boldsymbol{\omega}^k}_j
@@ -326,13 +328,13 @@ MathJax = {
 			\)<br>
 			<br>
 			second exterior derivative of a one-form: \( \textbf{d}(\textbf{dw}) = 0 \) <br>
-			second exterior derivative of vector: 
-			\( \textbf{d}^2 \textbf{v} 
+			second exterior derivative of vector:
+			\( \textbf{d}^2 \textbf{v}
 				= \textbf{d}^2 ( v^i \textbf{e}_i )
 				= \textbf{d} ( \textbf{d} v^i \textbf{e}_i + v^i \textbf{de}_i )
 				= \textbf{d} ( \textbf{d} v^i \textbf{e}_i + v^i \textbf{e}_j {\boldsymbol{\omega}^j}_i )
-				= \textbf{d}^2 v^i \textbf{e}_i 
-					+ \textbf{d} v^i \wedge \textbf{d} \textbf{e}_i 
+				= \textbf{d}^2 v^i \textbf{e}_i
+					+ \textbf{d} v^i \wedge \textbf{d} \textbf{e}_i
 					+ \textbf{d} v^i \wedge \textbf{e}_j {\boldsymbol{\omega}^j}_i
 					+ v^i \textbf{de}_j \wedge {\boldsymbol{\omega}^j}_i
 					+ v^i \textbf{e}_j \textbf{d}{\boldsymbol{\omega}^j}_i
@@ -342,7 +344,7 @@ MathJax = {
 					+ v^i \textbf{e}_j \textbf{d}{\boldsymbol{\omega}^j}_i
 			\)<br>
 			<!-- TODO i'm zeroing the 2dv^i term as well, find out why -->
-			...zero second exterior derivatives of one-forms... 
+			...zero second exterior derivatives of one-forms...
 			\( = v^i \textbf{e}_j {\boldsymbol{\omega}^j}_k \wedge {\boldsymbol{\omega}^k}_i
 				+ v^i \textbf{e}_j \textbf{d}{\boldsymbol{\omega}^j}_i \)<br>
 			let \( {\textbf{R}^i}_j = {\boldsymbol{\omega}^i}_k \wedge {\boldsymbol{\omega}^k}_j + \textbf{d}{\boldsymbol{\omega}^i}_j \)<br>
@@ -357,9 +359,9 @@ MathJax = {
 			\( = {R^i}_{jkl}\boldsymbol{\omega}^{|k} \wedge \boldsymbol{\omega}^{l|} \)<br>
 			\( = {R^i}_{j|kl|}\boldsymbol{\omega}^k \wedge \boldsymbol{\omega}^l \)<br>
 			<br>
-			\( 0 = \textbf{d} P 
+			\( 0 = \textbf{d} P
 				= \textbf{d} (\textbf{e}_k \otimes \boldsymbol{\omega}^k)
-				= \textbf{de}_k \wedge \boldsymbol{\omega}^k + \textbf{e}_k \otimes \textbf{d}\boldsymbol{\omega}^k 
+				= \textbf{de}_k \wedge \boldsymbol{\omega}^k + \textbf{e}_k \otimes \textbf{d}\boldsymbol{\omega}^k
 				= \textbf{e}_i \otimes {\boldsymbol{\omega}^i}_k \wedge \boldsymbol{\omega}^k + \textbf{e}_i \otimes \textbf{d} \boldsymbol{\omega}^i
 				= \textbf{e}_i \otimes ({\boldsymbol{\omega}^i}_k \wedge \boldsymbol{\omega}^k + \textbf{d} \boldsymbol{\omega}^i)
 			\)<br>
@@ -370,14 +372,14 @@ MathJax = {
 				= {\Gamma^k}_{ji} \boldsymbol{\omega}^i \wedge \boldsymbol{\omega}^j
 				= ({\Gamma^k}_{ji} - {\Gamma^k}_{ij}) \boldsymbol{\omega}^i \otimes \boldsymbol{\omega}^j
 				= {c_{ij}}^k \boldsymbol{\omega}^i \otimes \boldsymbol{\omega}^j
-			\)<br> 
+			\)<br>
 			This coincides with, in a holonomic basis, when \( \boldsymbol{\omega}^i = \textbf{d}x^i, \textbf{d} \boldsymbol{\omega}^i = \textbf{d}^2\textbf{x}^i = 0 \)<br>
 			<br>
 			Sources:<br>
 			Misner, Charles W.; Thorne, Kip S.; Wheeler, John Archibald (1970), <i>Gravitation</i>, New York: W.H. Freeman. ISBN 0-7167-0344-0<br>
 			Flanders, Harley (1989), <i>Differential Forms With Applications to the Physical Sciences</i>, Mineola, New York: Dover Publications, ISBN 0-486-66169-5<br>
 		</div>
-		
+
 		<div id='webglfail' style='display:none'>
 			Sorry, your browser does not support WebGL<br>
 		</div>

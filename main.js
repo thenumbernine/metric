@@ -1,7 +1,7 @@
 import {vec2, vec3, quat} from '/js/gl-matrix-3.4.1/index.js';
-import {DOM, getIDs, removeFromParent, show, hide} from '/js/util.js';
+import {DOM, getIDs, removeFromParent, show, hide, arrayClone} from '/js/util.js';
 import {EmbeddedLuaInterpreter} from '/js/lua.vm-util.js.lua';
-import {GLUtil} from '/js/gl-util.js';
+import {GLUtil, quatZAxis} from '/js/gl-util.js';
 import {Mouse3D} from '/js/mouse3d.js';
 import {makeGradient} from '/js/gl-util-Gradient.js';
 import {makeUnitQuad} from '/js/gl-util-UnitQuad.js';
@@ -23,7 +23,7 @@ function resize() {
 	canvas.height = window.innerHeight;
 	glutil.resize();
 
-	const width = window.innerWidth 
+	const width = window.innerWidth
 		- parseInt(ids.info.style.paddingLeft)
 		- parseInt(ids.info.style.paddingRight);
 	ids.info.style.width = width+'px';
@@ -39,6 +39,15 @@ function update() {
 	glutil.draw();
 	requestAnimationFrame(update);
 };
+
+// https://docs.mathjax.org/en/latest/web/typeset.html#typeset-async
+// new MathJax is a bit more restrictive of how to handle concurrent rendering ...
+function typeset(code) {
+	MathJax.startup.promise = MathJax.startup.promise
+		.then(() => MathJax.typesetPromise(code()))
+		.catch((err) => console.log('Typeset failed: ' + err.message));
+	return MathJax.startup.promise;
+}
 
 /*
 
@@ -158,26 +167,26 @@ function reset() {
 			let mappedCoord = currentCoordChart.mapping(coord);
 			let normal = currentCoordChart.unitDiff(coord, 2);
 			for (let k = 0; k < 2; ++k) {
-				meshObj.attrs.intCoord.data[k + 2 * (iphi + phiDiv * itheta)] = intCoord[k];
+				meshObj.attrs.intCoord.buffer.data[k + 2 * (iphi + phiDiv * itheta)] = intCoord[k];
 			}
 			for (let k = 0; k < 2; ++k) {
-				meshObj.attrs.coord.data[k + 2 * (iphi + phiDiv * itheta)] = coord[k];
+				meshObj.attrs.coord.buffer.data[k + 2 * (iphi + phiDiv * itheta)] = coord[k];
 			}
 			for (let k = 0; k < 3; ++k) {
-				meshObj.attrs.vertex.data[k + 3 * (iphi + phiDiv * itheta)] = mappedCoord[k];
+				meshObj.attrs.vertex.buffer.data[k + 3 * (iphi + phiDiv * itheta)] = mappedCoord[k];
 			}
 			for (let k = 0; k < 3; ++k) {
-				meshObj.attrs.normal.data[k + 3 * (iphi + phiDiv * itheta)] = normal[k];
+				meshObj.attrs.normal.buffer.data[k + 3 * (iphi + phiDiv * itheta)] = normal[k];
 			}
 		}
 	}
-	meshObj.attrs.intCoord.updateData();
-	meshObj.attrs.coord.updateData();
-	meshObj.attrs.vertex.updateData();
-	meshObj.attrs.normal.updateData();
-	
-	currentCoord = currentCoordChart.initialCoord.clone();
-	currentDirection = currentCoordChart.initialDirection.clone();
+	meshObj.attrs.intCoord.buffer.updateData();
+	meshObj.attrs.coord.buffer.updateData();
+	meshObj.attrs.vertex.buffer.updateData();
+	meshObj.attrs.normal.buffer.updateData();
+
+	currentCoord = arrayClone(currentCoordChart.initialCoord);
+	currentDirection = arrayClone(currentCoordChart.initialDirection);
 	//TODO mesh regen as well since we will want varying resolutions ... or not?
 	selectCoord(currentCoord);
 }
@@ -192,16 +201,16 @@ let pathLength = 5000;
 let currentCoord = [0.26623666555845704, 1.8215957403167709];
 let currentDirection = [0, 1];
 function selectCoord(coord) {
-	currentCoord = coord.clone();
+	currentCoord = arrayClone(coord);
 	let basis0 = currentCoordChart.diff(coord, 0);
 	let basis1 = currentCoordChart.diff(coord, 1);
 	let basis = [basis0, basis1];
-	
+
 	let unitBasis0 = currentCoordChart.unitDiff(coord, 0);
 	let unitBasis1 = currentCoordChart.unitDiff(coord, 1);
 	let normal = currentCoordChart.unitDiff(coord,2);
 	let unitBasis = [unitBasis0, unitBasis1];
-	
+
 	let mappedCoord = currentCoordChart.mapping(coord);
 
 	let selectionRadius = .1;
@@ -211,28 +220,28 @@ function selectCoord(coord) {
 		vec3.scaleAndAdd(modv, mappedCoord, unitBasis0, selectionRadius * Math.cos(psi));
 		vec3.scaleAndAdd(modv, modv, unitBasis1, selectionRadius * Math.sin(psi));
 		for (let j = 0; j < 3; ++j) {
-			selectionObj.attrs.vertex.data[3 * i + j] = modv[j];
+			selectionObj.attrs.vertex.buffer.data[3 * i + j] = modv[j];
 		}
 	}
-	selectionObj.attrs.vertex.updateData();
+	selectionObj.attrs.vertex.buffer.updateData();
 
 	let basisLength = .4;
 	for (let i = 0; i < 2; ++i) {
 		let basisObj = basisObjs[i];
 		for (let k = 0; k < 3; ++k) {
-			basisObj.attrs.vertex.data[k] = mappedCoord[k];
-			basisObj.attrs.vertex.data[3 + k] = mappedCoord[k] + basisLength * basis[i][k] + .01 * normal[k];
+			basisObj.attrs.vertex.buffer.data[k] = mappedCoord[k];
+			basisObj.attrs.vertex.buffer.data[3 + k] = mappedCoord[k] + basisLength * basis[i][k] + .01 * normal[k];
 		}
-		basisObj.attrs.vertex.updateData();
+		basisObj.attrs.vertex.buffer.updateData();
 		/* need a better way to visualize this ...
 		for (let j = 0; j < 2; ++j) {
 			let conn = currentCoordChart.connection(coord, i, j);
 			let connObj = connObjs[i][j];
 			for (let k = 0; k < 3; ++k) {
-				connObj.attrs.vertex.data[k] = mappedCoord[k] + basisLength * basis[i][k];
-				connObj.attrs.vertex.data[3+k] = mappedCoord[k] + basisLength * (basis[i][k] + conn[0] * basis[0][k] + conn[1] * basis[1][k]);
+				connObj.attrs.vertex.buffer.data[k] = mappedCoord[k] + basisLength * basis[i][k];
+				connObj.attrs.vertex.buffer.data[3+k] = mappedCoord[k] + basisLength * (basis[i][k] + conn[0] * basis[0][k] + conn[1] * basis[1][k]);
 			}
-			connObj.attrs.vertex.updateData();
+			connObj.attrs.vertex.buffer.updateData();
 		}
 		*/
 	}
@@ -241,22 +250,22 @@ function selectCoord(coord) {
 }
 
 function chooseDirection(direction) {
-	currentDirection = direction.clone();
-	let partialCoord = currentCoord.clone();
-	let partialDir = direction.clone();
-	let geoCoord = currentCoord.clone();
-	let geoDir = direction.clone();
+	currentDirection = arrayClone(direction);
+	let partialCoord = arrayClone(currentCoord);
+	let partialDir = arrayClone(direction);
+	let geoCoord = arrayClone(currentCoord);
+	let geoDir = arrayClone(direction);
 	let step = .001;
 	for (let i = 0; i < pathLength; ++i) {
 		partialCoord[0] += step * partialDir[0];
 		partialCoord[1] += step * partialDir[1];
 		let mapped = currentCoordChart.mapping(partialCoord);
 		let normal = currentCoordChart.unitDiff(partialCoord,2);
-		partialPathObj.attrs.vertex.data[3*i+0] = mapped[0] + .01 * normal[0];
-		partialPathObj.attrs.vertex.data[3*i+1] = mapped[1] + .01 * normal[1];
-		partialPathObj.attrs.vertex.data[3*i+2] = mapped[2] + .01 * normal[2];
+		partialPathObj.attrs.vertex.buffer.data[3*i+0] = mapped[0] + .01 * normal[0];
+		partialPathObj.attrs.vertex.buffer.data[3*i+1] = mapped[1] + .01 * normal[1];
+		partialPathObj.attrs.vertex.buffer.data[3*i+2] = mapped[2] + .01 * normal[2];
 	}
-	partialPathObj.attrs.vertex.updateData();
+	partialPathObj.attrs.vertex.buffer.updateData();
 	for (let i = 0; i < pathLength; ++i) {
 		geoCoord[0] += step * geoDir[0];
 		geoCoord[1] += step * geoDir[1];
@@ -272,67 +281,67 @@ function chooseDirection(direction) {
 		geoDir[1] += step * geoAccel[1];
 		let mapped = currentCoordChart.mapping(geoCoord);
 		let normal = currentCoordChart.unitDiff(geoCoord,2);
-		geodesicPathObj.attrs.vertex.data[3*i+0] = mapped[0] + .01 * normal[0];
-		geodesicPathObj.attrs.vertex.data[3*i+1] = mapped[1] + .01 * normal[1];
-		geodesicPathObj.attrs.vertex.data[3*i+2] = mapped[2] + .01 * normal[2];
+		geodesicPathObj.attrs.vertex.buffer.data[3*i+0] = mapped[0] + .01 * normal[0];
+		geodesicPathObj.attrs.vertex.buffer.data[3*i+1] = mapped[1] + .01 * normal[1];
+		geodesicPathObj.attrs.vertex.buffer.data[3*i+2] = mapped[2] + .01 * normal[2];
 	}
-	geodesicPathObj.attrs.vertex.updateData();
+	geodesicPathObj.attrs.vertex.buffer.updateData();
 }
 
 let findClickedCoord;
-(function(){
-	let tmp = vec3.create();
-	let tmp2 = vec3.create();
+{
+	const tmp = vec3.create();
+	const tmp2 = vec3.create();
 	findClickedCoord = function() {
-		let mouseDir = vec3.create();
+		const mouseDir = vec3.create();
 		glutil.mouseDir(mouseDir, mouse.xf, mouse.yf);
 		vec3.normalize(mouseDir, mouseDir);
 		//ray intersection test with coordinate chart ...
 		// for now just search for closest point in geometry?
 		let bestDist = undefined;
 		let bestCoord = undefined;
-		vec3.quatZAxis(tmp2, glutil.view.angle);
+		quatZAxis(tmp2, glutil.view.angle);
 		let considered = 0;
-		let pt = vec3.create();
-		for (let i = 0; i < meshObj.attrs.vertex.data.length/3; ++i) {
-			let normal = [
-				meshObj.attrs.normal.data[3*i+0],
-				meshObj.attrs.normal.data[3*i+1],
-				meshObj.attrs.normal.data[3*i+2]
+		const pt = vec3.create();
+		for (let i = 0; i < meshObj.attrs.vertex.buffer.data.length/3; ++i) {
+			const normal = [
+				meshObj.attrs.normal.buffer.data[3*i+0],
+				meshObj.attrs.normal.buffer.data[3*i+1],
+				meshObj.attrs.normal.buffer.data[3*i+2]
 			];
 			vec3.transformQuat(normal, normal, sceneObj.angle);
 			if (vec3.dot(normal, tmp2) < 0) continue;	//forward dot normal > 0 means the surface is back-facing
-			
-			let vertex = [
-				meshObj.attrs.vertex.data[3*i+0],
-				meshObj.attrs.vertex.data[3*i+1],
-				meshObj.attrs.vertex.data[3*i+2]
+
+			const vertex = [
+				meshObj.attrs.vertex.buffer.data[3*i+0],
+				meshObj.attrs.vertex.buffer.data[3*i+1],
+				meshObj.attrs.vertex.buffer.data[3*i+2]
 			];
 			vec3.transformQuat(pt, vertex, sceneObj.angle);
 
-			
+
 			//make sure we're on the right side of the view plane
 			vec3.sub(tmp, pt, glutil.view.pos);
 			if (vec3.dot(tmp, tmp2) > 0) continue;	//fwd dot delta > 0 means we're good, so -fwd dot delta < 0 means we're good, so -fwd dot delta > 0 means we're bad
-		
+
 			considered++;
 
 			//ray/point distance from view pos / mouse line
 			vec3.sub(tmp, pt, glutil.view.pos);
 			vec3.cross(tmp, tmp, mouseDir);
-			let dist = vec3.length(tmp);
-			
+			const dist = vec3.length(tmp);
+
 			if (bestDist === undefined || dist < bestDist) {
 				bestDist = dist;
 				bestCoord = [
-					meshObj.attrs.coord.data[2*i+0],
-					meshObj.attrs.coord.data[2*i+1]
+					meshObj.attrs.coord.buffer.data[2*i+0],
+					meshObj.attrs.coord.buffer.data[2*i+1]
 				];
 			}
 		}
 		return bestCoord;
 	}
-})();
+}
 
 ids.panelButton.addEventListener('click', e => {
 	show(ids.panel);
@@ -358,6 +367,7 @@ try {
 	glutil = new GLUtil({canvas:canvas});
 	gl = glutil.context;
 } catch (e) {
+	console.log('glutil failed', e);
 	removeFromParent(canvas);
 	show(ids.webglfail);
 	throw e;
@@ -384,20 +394,19 @@ currentCoordChart = coordCharts.Spherical;
 //init lua
 console.log('loading lua');
 let luaDoneLoading = false;
-let lua = new EmbeddedLuaInterpreter({
+const lua = new EmbeddedLuaInterpreter({
 	packages : ['ext', 'symmath', 'complex'],
 	packageTests : ['symmath'],
 	done : function() {
 		console.log('loaded lua');
-
-		let lua = this;
+		const lua = this;
 
 		//args: callback = what to execute, output = where to redirect output, error = where to redirect errors
-		let capture = function(args) {
+		const capture = args => {
 			//now cycle through coordinates, evaluate data points, and get the data back into JS
 			//push module output and redirect to a buffer of my own
-			let oldPrint = lua.print;
-			let oldError = lua.printErr;
+			const oldPrint = lua.print;
+			const oldError = lua.printErr;
 			if (args.output !== undefined) lua.print = args.output;
 			if (args.error !== undefined) lua.printErr = args.error;
 			args.callback();
@@ -406,74 +415,76 @@ let lua = new EmbeddedLuaInterpreter({
 		};
 
 		capture({
-			callback : function() {
-		
-		lua.executeAndPrint(`
+			callback : () => {
+				lua.executeAndPrint(`
 local symmath = require 'symmath'
 symmath.setup()
-local LaTeX = symmath.export.LaTeX	
+local LaTeX = symmath.export.LaTeX
 symmath.tostring = LaTeX
 LaTeX.openSymbol = ''
 LaTeX.closeSymbol = ''
 `);
 console.log('initialized symmath');
-
 			},
-			output : function(s) {
+			output : s => {
 				console.log(s);
 			}
 		});
-		
+
 		luaDoneLoading = true;
 	},
 	autoLaunch : true
 });
 window.lua = lua;
-let coordLabels = ['x', 'y', 'z'];
+const coordLabels = ['x', 'y', 'z'];
 
-let allInputs = coordLabels
+const allInputs = coordLabels
 .map(x => { return 'equation'+x.toUpperCase(); })
 .concat(['parameters', 'constants'])
 .map(id => { return ids[id]; });
 
 //args: done: what to execute next
-let updateEquations = function() {
-	let doUpdateEquations = function() {
-	
+const updateEquations = () => {
+	const doUpdateEquations = () => {
+
 		//args: callback = what to execute, output = where to redirect output, error = where to redirect errors
-		let capture = function(args) {
+		const capture = args => {
 			//now cycle through coordinates, evaluate data points, and get the data back into JS
 			//push module output and redirect to a buffer of my own
-			let oldPrint = lua.print;
-			let oldError = lua.printErr;
+			const oldPrint = lua.print;
+			const oldError = lua.printErr;
 			if (args.output !== undefined) lua.print = args.output;
 			if (args.error !== undefined) lua.printErr = args.error;
 			args.callback();
 			lua.print = oldPrint;
 			lua.printErr = oldError;
 		};
-		
-		
+
+
 		//declare parameter variables
-		let parameters = ids.parameters.value.split(',').map(s => { return s.trim(); });
+		const parameters = ids.parameters.value.split(',').map(s => { return s.trim(); });
 		parameters.forEach(param => {
 			lua.executeAndPrint(param+" = Variable('"+param+"')");
 		});
-		
-		ids.constants.value.split(',').map(s => { 
+
+		ids.constants.value
+		.split(',')
+		.map(s => {
 			s = s.trim();
-			let eqs = s.split('=').map(side => { return side.trim(); });
-			let param = eqs[0];
-			let value = eqs[1];
+			const eqs = s
+			.split('=')
+			.map(side => { return side.trim(); });
+			const param = eqs[0];
+			const value = eqs[1];
 			lua.executeAndPrint(param+" = Constant("+value+")");
 		});
-		
+
 		let propertiesHTML = '';
-		
-		let luaEqnToJSFunc = function(eqn, params, texLabel) {
+
+		const luaEqnToJSFunc = (eqn, params, texLabel) => {
 			let failed = false;
 			//here I'm using output for errors
-			//since directing error doesn't work -- all errors result in stdout printing "ERROR attempt to call string" 
+			//since directing error doesn't work -- all errors result in stdout printing "ERROR attempt to call string"
 			capture({
 				callback : function() {
 					lua.execute("eqn = simplify("+eqn+")");
@@ -486,28 +497,40 @@ let updateEquations = function() {
 				}
 			});
 			if (failed) throw 'Lua error!';
-		
+
 			//here I'm using output for capturing the compiled lua code
 			// I'm recording errors if the captured code fails to compile in JavaScript
 			let resultFunction = undefined;
 			capture({
 				callback : function() {
 					//execute it as a single line, so output() could capture it all at once (because output() seems to be called line-by-line)
-					let luaCmd = "print((require 'symmath.export.JavaScript':toFuncCode{func='__tmpf', output={eqn}, input={"+params+"}}:gsub('\\n', ' ')))";
-					console.log('executing lua '+luaCmd);
+					let luaCmd = `
+print((
+	require 'symmath.export.JavaScript'
+	:toFuncCode{
+		output = {eqn},
+		input = {`+params+`},
+	}:gsub('\\n', ' ')
+))
+`;
+					console.log('executing lua', luaCmd);
 					//print commands are going to the old output ...
 					lua.execute(luaCmd);
 					//TODO if lua has a syntax error, I just get "attempt to call a string value"
 					// and I think this is going on inside of lua.vm.js ... time to replace it yet?
 				},
 				output : function(jsCmd) {
-					console.log('got JS output '+jsCmd);
+					console.log('got JS output', jsCmd);
 					try {
 						//seems I used to be able to eval("function(){}") and get a function value back ... not anymore?
 						//resultFunction = eval(jsCmd);
-						eval(jsCmd);
-						resultFunction = __tmpf;
-						__tmpf = undefined;
+						// did eval() just get worse with ES6?
+						// now I can't find any way for eval() to return a function, except by assigning it to a global (window)
+						//ironic if ES6 is phasing out 'window' access in modules.
+						//javascript is such a shitty language ...
+						eval('window.__tmpf = '+jsCmd);
+						resultFunction = window.__tmpf;
+						window.__tmpf = undefined;
 					} catch (e) {
 						console.log("Lua error!", e);
 						failed = true;
@@ -520,12 +543,12 @@ let updateEquations = function() {
 
 			//while we're here, let's store the LaTex generated from the equations ...
 			capture({
-				callback : function() {
+				callback : () => {
 					let luaCmd = "print((require 'symmath.export.LaTeX'(eqn)))"
 					console.log('executing lua '+luaCmd);
 					lua.execute(luaCmd);
 				},
-				output : function(TeX) {
+				output : TeX => {
 					console.log('got TeX output '+TeX);
 					if (texLabel !== undefined) TeX = texLabel + ' = {' + TeX + '}';
 					propertiesHTML += '$ ' + TeX + ' $<br>\n';
@@ -536,18 +559,18 @@ let updateEquations = function() {
 		};
 
 		//compile equations here
-		let coordCallbacks = [];	//coordCallbacks[xyz]
-		let coordDerivs = [];		//coordDerivs[xyz][uv|normal]
-		let metric = [];			//metric[uv][uv] = g_ij = e_i dot e_j
-		let metricEqn = [];
-		let invMetricEqn = [];		//invMetricEqn[uv][uv] = g^ij
-		let diffMetricEqn = [];		//diffMetricEqn[uv][uv][uv] = g_ij,k
-		let conn1stEqn = [];		//conn1stEqn[uv][uv][uv] = conn_ijk = 1/2 (g_ij,k + g_ik,j - g_jk,i)
-		let conn2nd = [];			//conn2nd[uv][uv][uv] = conn^i_jk = g^il * conn_ljk
-		let conn2ndEqn = [];
+		const coordCallbacks = [];	//coordCallbacks[xyz]
+		const coordDerivs = [];		//coordDerivs[xyz][uv|normal]
+		const metric = [];			//metric[uv][uv] = g_ij = e_i dot e_j
+		const metricEqn = [];
+		const invMetricEqn = [];		//invMetricEqn[uv][uv] = g^ij
+		const diffMetricEqn = [];		//diffMetricEqn[uv][uv][uv] = g_ij,k
+		const conn1stEqn = [];		//conn1stEqn[uv][uv][uv] = conn_ijk = 1/2 (g_ij,k + g_ik,j - g_jk,i)
+		const conn2nd = [];			//conn2nd[uv][uv][uv] = conn^i_jk = g^il * conn_ljk
+		const conn2ndEqn = [];
 		console.log('generating coordinate chart functions...');
+		const equations = [];
 		let failed = false;
-		let equations = [];
 		for (let i = 0; i < coordLabels.length; ++i) {
 			equations[i] = ids['equation'+coordLabels[i].toUpperCase()].value;
 		}
@@ -563,7 +586,7 @@ let updateEquations = function() {
 				});
 			});
 
-			//get metric and its derivative 
+			//get metric and its derivative
 			parameters.forEach((u,i) => {
 				metric[i] = [];
 				metricEqn[i] = [];
@@ -584,8 +607,8 @@ let updateEquations = function() {
 
 			//inverse metric
 			if (parameters.length != 2) throw 'only works with two parameters';
-			let metricDetEqn = '('+metricEqn[0][0]+') * ('+metricEqn[1][1]+') - ('+metricEqn[1][0]+') * ('+metricEqn[0][1]+')';
-			let invMetricEqn = [
+			const metricDetEqn = '('+metricEqn[0][0]+') * ('+metricEqn[1][1]+') - ('+metricEqn[1][0]+') * ('+metricEqn[0][1]+')';
+			const invMetricEqn = [
 				[	'('+metricEqn[1][1]+') / ('+metricDetEqn+')',	//00
 					'-('+metricEqn[0][1]+') / ('+metricDetEqn+')'],	//01
 				[	'-('+metricEqn[1][0]+') / ('+metricDetEqn+')',	//10
@@ -611,7 +634,7 @@ let updateEquations = function() {
 					conn2nd[i][j] = [];
 					conn2ndEqn[i][j] = [];
 					parameters.forEach((w,k) => {
-						let sum = [];
+						const sum = [];
 						for (let l = 0; l < parameters.length; ++l) {
 							sum.push('('+invMetricEqn[i][l]+') * ('+conn1stEqn[l][j][k]+')');
 						}
@@ -620,19 +643,19 @@ let updateEquations = function() {
 					});
 				});
 			});
-			
+
 			//get normal
 			equations.forEach((eqn,i) => {
-				let j = (i+1)%equations.length;
-				let k = (j+1)%equations.length;
-				let dj_du = coordDerivs[j][0];
-				let dk_du = coordDerivs[k][0];
-				let dj_dv = coordDerivs[j][1];
-				let dk_dv = coordDerivs[k][1];
-				coordDerivs[i][2] = function() { 
-					return dj_du.apply(undefined, arguments) 
-						* dk_dv.apply(undefined, arguments) 
-						- dk_du.apply(undefined,arguments) 
+				const j = (i+1)%equations.length;
+				const k = (j+1)%equations.length;
+				const dj_du = coordDerivs[j][0];
+				const dk_du = coordDerivs[k][0];
+				const dj_dv = coordDerivs[j][1];
+				const dk_dv = coordDerivs[k][1];
+				coordDerivs[i][2] = function() {
+					return dj_du.apply(undefined, arguments)
+						* dk_dv.apply(undefined, arguments)
+						- dk_du.apply(undefined,arguments)
 						* dj_dv.apply(undefined,arguments);
 				};
 			});
@@ -642,74 +665,75 @@ let updateEquations = function() {
 		}
 		if (failed) {
 			//color the failed input textarea red
-			allInputs.forEach((input,i) => {
-				input.css({background:'rgb(255,127,127)'});
+			allInputs.forEach(input => {
+				input.style.background = 'rgb(255,127,127)';
 			});
 			return;
 		} else {
-			allInputs.forEach((input,i) => {
-				input.css({background:'white'});
+			allInputs.forEach(input => {
+				input.style.background = 'white';
 			});
 		}
 		currentCoordChart.mapping = function(coord) {
-			let result = [];
+			const result = [];
 			for (let k = 0; k < coordLabels.length; ++k) {
 				result[k] = coordCallbacks[k].apply(undefined, coord);
 			}
 			return result;
 		};
 		currentCoordChart.diff = function(coord, dim) {
-			let result = [];
+			const result = [];
 			for (let k = 0; k < coordLabels.length; ++k) {
 				result[k] = coordDerivs[k][dim].apply(undefined, coord);
 			}
 			return result;
 		};
 		currentCoordChart.unitDiff = function(coord, dim) {
-			let diff = this.diff(coord, dim);
-			let len = vec3.length(diff);
+			const diff = this.diff(coord, dim);
+			const len = vec3.length(diff);
 			return [diff[0] / len, diff[1] / len, diff[2] / len];
 		};
 		currentCoordChart.connection = function(coord, k, j) {
-			let result = [];
+			const result = [];
 			for (let i = 0; i < parameters.length; ++i) {
 				result[i] = conn2nd[i][j][k].apply(undefined, coord);
 			}
 			return result;
 		};
-		
+
 		//process TeX
-		let symbols = ['theta', 'phi', 'rho', 'gamma', 'Gamma'];
+		const symbols = ['theta', 'phi', 'rho', 'gamma', 'Gamma'];
 		symbols.forEach((sym,i) => {
 			propertiesHTML = propertiesHTML.replace(new RegExp(sym, 'g'), '\\'+sym);
 		});
 		ids.properties.innerHTML = propertiesHTML;
-		MathJax.Hub.Queue(["Typeset", MathJax.Hub, "properties"]);
-		
+		typeset(() => ids.properties);
+
 		reset();	//regenerate mesh
 	};
 	//wait for done lua loading
-	let loadingInterval = setInterval(function() {
+	let loadingInterval = setInterval(() => {
 		if (luaDoneLoading) {
 			clearInterval(loadingInterval);
+			loadingInterval = undefined;
 			doUpdateEquations();
 		}
 	}, 100);
-	
+
 };
 
 let delayToUpdateEquations = undefined;
-(function(){
+{
 	let updateInterval = undefined;
-	delayToUpdateEquations = function() {
+	delayToUpdateEquations = () => {
 		if (updateInterval !== undefined) {
 			clearInterval(updateInterval);
 		}
-		updateInterval = setTimeout(function() {
+		updateInterval = setTimeout(() => {
 			updateEquations();
 		}, 1000);
 	};
-})();
+}
 
 allInputs.forEach((input,i) => {
 	input.addEventListener('change', delayToUpdateEquations);
@@ -753,18 +777,18 @@ function selectCoordChart(name) {
 	updateEquations();
 }
 
-let tmpQ = quat.create();	
+const tmpQ = quat.create();
 mouse = new Mouse3D({
 	pressObj : canvas,
 	move : function(dx,dy) {
 		if (inputState == 'select') {
 			let bestCoord = findClickedCoord();
-		
+
 			if (bestCoord !== undefined) {
 				selectCoord(bestCoord);
 			}
 		}
-		
+
 		if (inputState == 'rotate') {
 			let rotAngle = Math.PI / 180 * .03 * Math.sqrt(dx*dx + dy*dy);
 			quat.setAxisAngle(tmpQ, [dy, dx, 0], rotAngle);
@@ -781,8 +805,8 @@ mouse = new Mouse3D({
 				//TODO
 				//rotate view ray and origin by inverse angle
 				//intersect view ray with plane of surface normal and mapped coordinate
-				
-				
+
+
 				let mappedClickedCoord = currentCoordChart.mapping(clickedCoord);
 				let delta = [
 					mappedClickedCoord[0] - mappedCurrentCoord[0],
@@ -796,7 +820,7 @@ mouse = new Mouse3D({
 				let basis1 = currentCoordChart.unitDiff(currentCoord, 1);
 				let d0 = vec3.dot(basis0, delta);
 				let d1 = vec3.dot(basis1, delta);
-				let dl = vec2.length([d0, d1]); 
+				let dl = vec2.length([d0, d1]);
 				chooseDirection([d0/dl, d1/dl]);
 			}
 		}
@@ -806,13 +830,13 @@ mouse = new Mouse3D({
 	}
 });
 
-let offset = [ [0,0], [1,0], [1,1], [1,1], [0,1], [0,0] ];
+const offset = [ [0,0], [1,0], [1,1], [1,1], [0,1], [0,0] ];
 let indexes = [];
 for (let itheta = 0; itheta < intDivs[0]-1; ++itheta) {
 	for (let iphi = 0; iphi < intDivs[1]-1; ++iphi) {
 		for (let k = 0; k < offset.length; ++k) {
 			indexes.push(
-				iphi + offset[k][0] + (itheta + offset[k][1]) * intDivs[1] 
+				iphi + offset[k][0] + (itheta + offset[k][1]) * intDivs[1]
 			);
 		}
 	}
@@ -821,7 +845,7 @@ for (let itheta = 0; itheta < intDivs[0]-1; ++itheta) {
 glutil.view.pos[2] = 2;
 glutil.view.zFar = 100;
 glutil.view.zNear = .1;
-let plainShader = new glutil.Program({
+const plainShader = new glutil.Program({
 	vertexCode : `
 in vec3 vertex;
 uniform mat4 projMat;
@@ -838,7 +862,7 @@ void main() {
 }
 `
 });
-let meshShader = new glutil.Program({
+const meshShader = new glutil.Program({
 	vertexCode : `
 in vec3 vertex;
 in vec2 intCoord;
@@ -865,11 +889,11 @@ out vec4 fragColor;
 void main() {
 	vec3 n = normalize(normalV);
 	if (n.z < 0.) n = -n;	//backface lighting
-	
+
 	vec2 fc = mod(intCoordV.xy / 10., 1.); //grid
 	float i = 1. - 8. * fc.x * fc.y * (1. - fc.x) * (1. - fc.y);
 	i = pow(i, 50.);
-	
+
 	fragColor = vec4(.25, .5, .5, 1.);
 	fragColor.rgb *= 1. - i;
 	vec3 u = normalize(vertexV);
@@ -1015,7 +1039,7 @@ geodesicPathObj = new glutil.SceneObject({
 
 gl.enable(gl.DEPTH_TEST);
 
-selectCoordChart('Spherical');	
+selectCoordChart('Spherical');
 
 window.addEventListener('resize', resize);
 resize();
