@@ -398,25 +398,11 @@ const lua = new EmbeddedLuaInterpreter({
 	packages : ['ext', 'symmath', 'complex'],
 	packageTests : ['symmath'],
 	done : function() {
-		console.log('loaded lua');
-		const lua = this;
-
-		//args: callback = what to execute, output = where to redirect output, error = where to redirect errors
-		const capture = args => {
-			//now cycle through coordinates, evaluate data points, and get the data back into JS
-			//push module output and redirect to a buffer of my own
-			const oldPrint = lua.print;
-			const oldError = lua.printErr;
-			if (args.output !== undefined) lua.print = args.output;
-			if (args.error !== undefined) lua.printErr = args.error;
-			args.callback();
-			lua.print = oldPrint;
-			lua.printErr = oldError;
-		};
-
-		capture({
+console.log('loaded lua');
+		const thiz = this;
+		this.capture({
 			callback : () => {
-				lua.executeAndPrint(`
+				thiz.executeAndPrint(`
 local symmath = require 'symmath'
 symmath.setup()
 local LaTeX = symmath.export.LaTeX
@@ -427,10 +413,9 @@ LaTeX.closeSymbol = ''
 console.log('initialized symmath');
 			},
 			output : s => {
-				console.log(s);
+console.log(s);
 			}
 		});
-
 		luaDoneLoading = true;
 	},
 	autoLaunch : true
@@ -446,21 +431,6 @@ const allInputs = coordLabels
 //args: done: what to execute next
 const updateEquations = () => {
 	const doUpdateEquations = () => {
-
-		//args: callback = what to execute, output = where to redirect output, error = where to redirect errors
-		const capture = args => {
-			//now cycle through coordinates, evaluate data points, and get the data back into JS
-			//push module output and redirect to a buffer of my own
-			const oldPrint = lua.print;
-			const oldError = lua.printErr;
-			if (args.output !== undefined) lua.print = args.output;
-			if (args.error !== undefined) lua.printErr = args.error;
-			args.callback();
-			lua.print = oldPrint;
-			lua.printErr = oldError;
-		};
-
-
 		//declare parameter variables
 		const parameters = ids.parameters.value.split(',').map(s => { return s.trim(); });
 		parameters.forEach(param => {
@@ -485,14 +455,14 @@ const updateEquations = () => {
 			let failed = false;
 			//here I'm using output for errors
 			//since directing error doesn't work -- all errors result in stdout printing "ERROR attempt to call string"
-			capture({
+			lua.capture({
 				callback : function() {
 					lua.execute("eqn = simplify("+eqn+")");
 					lua.execute("if type(eqn) == 'number' then eqn = Constant(eqn) end");
 				},
 				output : function(s) {
 					//don't throw -- lua.execute will catch it.
-					console.log('Lua error!', s);
+console.log('Lua error!', s);
 					failed = true;
 				}
 			});
@@ -501,8 +471,8 @@ const updateEquations = () => {
 			//here I'm using output for capturing the compiled lua code
 			// I'm recording errors if the captured code fails to compile in JavaScript
 			let resultFunction = undefined;
-			capture({
-				callback : function() {
+			lua.capture({
+				callback : () => {
 					//execute it as a single line, so output() could capture it all at once (because output() seems to be called line-by-line)
 					let luaCmd = `
 print((
@@ -513,14 +483,15 @@ print((
 	}:gsub('\\n', ' ')
 ))
 `;
-					console.log('executing lua', luaCmd);
+console.log('in-callback prints', lua.LuaModule.print, lua.LuaModule.printErr);
+console.log('executing lua', luaCmd);
 					//print commands are going to the old output ...
 					lua.execute(luaCmd);
 					//TODO if lua has a syntax error, I just get "attempt to call a string value"
 					// and I think this is going on inside of lua.vm.js ... time to replace it yet?
 				},
-				output : function(jsCmd) {
-					console.log('got JS output', jsCmd);
+				output : jsCmd => {
+console.log('got JS output', jsCmd);
 					try {
 						//seems I used to be able to eval("function(){}") and get a function value back ... not anymore?
 						//resultFunction = eval(jsCmd);
@@ -532,29 +503,30 @@ print((
 						resultFunction = window.__tmpf;
 						window.__tmpf = undefined;
 					} catch (e) {
-						console.log("Lua error!", e);
+console.log("Lua error!", e);
 						failed = true;
 					}
-				}
+				},
 			});
 			if (failed) {
 				throw 'Lua error!';
 			}
 
 			//while we're here, let's store the LaTex generated from the equations ...
-			capture({
+			lua.capture({
 				callback : () => {
 					let luaCmd = "print((require 'symmath.export.LaTeX'(eqn)))"
-					console.log('executing lua '+luaCmd);
+console.log('executing lua '+luaCmd);
 					lua.execute(luaCmd);
 				},
 				output : TeX => {
-					console.log('got TeX output '+TeX);
+console.log('got TeX output '+TeX);
 					if (texLabel !== undefined) TeX = texLabel + ' = {' + TeX + '}';
 					propertiesHTML += '$ ' + TeX + ' $<br>\n';
-				}
+				},
 			});
 
+			if (!resultFunction) throw "failed to create symmath->javascript function!";
 			return resultFunction;
 		};
 
@@ -568,7 +540,7 @@ print((
 		const conn1stEqn = [];		//conn1stEqn[uv][uv][uv] = conn_ijk = 1/2 (g_ij,k + g_ik,j - g_jk,i)
 		const conn2nd = [];			//conn2nd[uv][uv][uv] = conn^i_jk = g^il * conn_ljk
 		const conn2ndEqn = [];
-		console.log('generating coordinate chart functions...');
+console.log('generating coordinate chart functions...');
 		const equations = [];
 		let failed = false;
 		for (let i = 0; i < coordLabels.length; ++i) {
@@ -707,7 +679,7 @@ print((
 			propertiesHTML = propertiesHTML.replace(new RegExp(sym, 'g'), '\\'+sym);
 		});
 		ids.properties.innerHTML = propertiesHTML;
-		typeset(() => ids.properties);
+		typeset(() => [ids.properties]);
 
 		reset();	//regenerate mesh
 	};
