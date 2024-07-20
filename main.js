@@ -394,7 +394,7 @@ currentCoordChart = coordCharts.Spherical;
 //init lua
 let luaDoneLoading = false;
 const lua = new EmbeddedLuaInterpreter({
-	packages : ['ext', 'symmath', 'complex'],
+	packages : ['ext', 'symmath', 'complex', 'bignumber'],
 	packageTests : ['symmath'],
 	done : function() {
 console.log('loaded lua');
