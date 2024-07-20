@@ -2,7 +2,11 @@
 
 ## Metric Visualization
 
+### [Launch](https://thenumbernine.github.io/metric/)
+
 Currently uses spherical metric and displays basis along theta and phi.
+
+Be sure to check out the [Lua version](https://github.com/thenumbernine/lua-metric).
 
 soon to display additional information such as
 - better lighting / models?
