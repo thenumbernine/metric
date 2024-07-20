@@ -1,6 +1,6 @@
 import {vec2, vec3, quat} from '/js/gl-matrix-3.4.1/index.js';
 import {DOM, getIDs, removeFromParent, show, hide, arrayClone} from '/js/util.js';
-import {EmbeddedLuaInterpreter} from '/js/lua.vm-util.js.lua';
+import {EmbeddedLuaInterpreter} from '/js/lua.vm-util.js';
 import {GLUtil, quatZAxis} from '/js/gl-util.js';
 import {Mouse3D} from '/js/mouse3d.js';
 import {makeGradient} from '/js/gl-util-Gradient.js';
