@@ -1,5 +1,6 @@
+import {Canvas, Option} from '/js/dom.js';
 import {vec2, vec3, quat} from '/js/gl-matrix-3.4.1/index.js';
-import {DOM, getIDs, removeFromParent, show, hide, arrayClone} from '/js/util.js';
+import {getIDs, removeFromParent, show, hide, arrayClone} from '/js/util.js';
 import {EmbeddedLuaInterpreter} from '/js/lua.vm-util.js';
 import {GLUtil, quatZAxis} from '/js/gl-util.js';
 import {Mouse3D} from '/js/mouse3d.js';
@@ -352,8 +353,8 @@ ids.infoButton.addEventListener('click', e => {
 	hide(ids.panel);
 });
 
-canvas = DOM('canvas', {
-	css : {
+canvas = Canvas({
+	style : {
 		left : 0,
 		top : 0,
 		position : 'absolute',
@@ -440,6 +441,7 @@ const updateEquations = () => {
 		.split(',')
 		.map(s => {
 			s = s.trim();
+			if (s === '') return;
 			const eqs = s
 			.split('=')
 			.map(side => { return side.trim(); });
@@ -715,8 +717,8 @@ allInputs.forEach((input,i) => {
 
 Object.entries(coordCharts).forEach(entry => {
 	const [name,coordChart] = entry;
-	const option = DOM('option', {
-		text : name,
+	const option = Option({
+		innerText : name,
 		value : name,
 		appendTo : ids.coordinateSystem,
 	});
