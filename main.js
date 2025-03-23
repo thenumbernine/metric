@@ -1,12 +1,16 @@
 import {Canvas, Option} from '/js/dom.js';
 import {vec2, vec3, quat} from '/js/gl-matrix-3.4.1/index.js';
 import {getIDs, removeFromParent, show, hide, arrayClone} from '/js/util.js';
-import {EmbeddedLuaInterpreter} from '/js/lua.vm-util.js';
+import {newLua} from '/js/lua-interop.js';
+import {addPackage} from '/js/lua.vm-util.js';
+import {luaPackages} from '/js/lua-packages.js';
 import {GLUtil, quatZAxis} from '/js/gl-util.js';
 import {Mouse3D} from '/js/mouse3d.js';
 import {makeGradient} from '/js/gl-util-Gradient.js';
 import {makeUnitQuad} from '/js/gl-util-UnitQuad.js';
 import {makeFloatTexture2D} from '/js/gl-util-FloatTexture2D.js';
+
+
 
 const ids = getIDs();
 window.ids = ids;
@@ -143,10 +147,10 @@ let coordCharts = {
 		initialDirection : [0,1]
 	}
 };
-let currentCoordChart;
 
 let intDivs = [120,120];
 
+let currentCoordChart;
 let intCoordToCoord = function(intCoord) {
 	let coord = [];
 	let coordMin = currentCoordChart.coordinateMin;
@@ -389,20 +393,65 @@ ids.tools_direction.addEventListener('click', e => { inputState = 'direction'; }
 
 currentCoordChart = coordCharts.Spherical;
 
+let capturePrint, capturePrintErr;
+const lua = await newLua({
+	print : s => {
+		if (capturePrint) {
+			capturePrint(s);
+		} else {
+			console.log('> ' + s);
+		}
+	},
+	printErr : s => {
+		if (capturePrintErr) {
+			capturePrintErr(s);
+		} else {
+			console.log('> ' + s);
+		}
+	},
+});
 
 
+
+/*
+I'd make this a lua-interop, but it seems that changing lua.lib.print/Err doesn't reflect in the emscripten/wasm code...
+sooo TODO find how to replace stdout+stderr in wasm/emscripten and then move this into lua-interop
+args:
+	callback = what to execute,
+	output = where to redirect output,
+	error = where to redirect errors
+*/
+const capture = args => {
+	//now cycle through coordinates, evaluate data points, and get the data back into JS
+	//push module output and redirect to a buffer of my own
+	const oldPrint = capturePrint;
+	const oldPrintErr = capturePrintErr;
+	capturePrint = args.output;
+	capturePrintErr = args.error;
+	args.callback(this);
+	capturePrint = oldPrint;
+	capturePrintErr = oldPrintErr;
+};
+
+
+lua.newState();
+window.lua = lua;
+
+const FS = lua.lib.FS;
+await Promise.all([
+	luaPackages.ext,
+	luaPackages.symmath,
+	luaPackages.complex,
+	luaPackages.bignumber,
+].map(pkg => addPackage(FS, pkg)));
+
+lua.doString(` package.path = './?.lua;/?.lua;/?/?.lua' `);
+FS.chdir('/symmath');
 
 //init lua
-let luaDoneLoading = false;
-const lua = new EmbeddedLuaInterpreter({
-	packages : ['ext', 'symmath', 'complex', 'bignumber'],
-	packageTests : ['symmath'],
-	done : function() {
 console.log('loaded lua');
-		const thiz = this;
-		this.capture({
-			callback : () => {
-				thiz.executeAndPrint(`
+let luaDoneLoading = false;
+lua.doString(`
 local symmath = require 'symmath'
 symmath.setup()
 local LaTeX = symmath.export.LaTeX
@@ -410,17 +459,9 @@ symmath.tostring = LaTeX
 LaTeX.openSymbol = ''
 LaTeX.closeSymbol = ''
 `);
+luaDoneLoading = true;
 console.log('initialized symmath');
-			},
-			output : s => {
-console.log(s);
-			}
-		});
-		luaDoneLoading = true;
-	},
-	autoLaunch : true
-});
-window.lua = lua;
+
 const coordLabels = ['x', 'y', 'z'];
 
 const allInputs = coordLabels
@@ -434,7 +475,7 @@ const updateEquations = () => {
 		//declare parameter variables
 		const parameters = ids.parameters.value.split(',').map(s => { return s.trim(); });
 		parameters.forEach(param => {
-			lua.executeAndPrint(param+" = Variable('"+param+"')");
+			lua.doString(param+" = Variable('"+param+"')");
 		});
 
 		ids.constants.value
@@ -447,7 +488,7 @@ const updateEquations = () => {
 			.map(side => { return side.trim(); });
 			const param = eqs[0];
 			const value = eqs[1];
-			lua.executeAndPrint(param+" = Constant("+value+")");
+			lua.doString(param+" = Constant("+value+")");
 		});
 
 		let propertiesHTML = '';
@@ -456,23 +497,23 @@ const updateEquations = () => {
 			let failed = false;
 			//here I'm using output for errors
 			//since directing error doesn't work -- all errors result in stdout printing "ERROR attempt to call string"
-			lua.capture({
-				callback : function() {
-					lua.execute("eqn = simplify("+eqn+")");
-					lua.execute("if type(eqn) == 'number' then eqn = Constant(eqn) end");
+			capture({
+				callback : () => {
+					lua.doString("eqn = simplify("+eqn+")");
+					lua.doString("if type(eqn) == 'number' then eqn = Constant(eqn) end");
 				},
-				output : function(s) {
-					//don't throw -- lua.execute will catch it.
+				output : s => {
+					//don't throw -- lua.doString will catch it.
 console.log('Lua error!', s);
 					failed = true;
-				}
+				},
 			});
 			if (failed) throw 'Lua error!';
 
 			//here I'm using output for capturing the compiled lua code
 			// I'm recording errors if the captured code fails to compile in JavaScript
 			let resultFunction = undefined;
-			lua.capture({
+			capture({
 				callback : () => {
 					//execute it as a single line, so output() could capture it all at once (because output() seems to be called line-by-line)
 					let luaCmd = `
@@ -484,10 +525,9 @@ print((
 	}:gsub('\\n', ' ')
 ))
 `;
-console.log('in-callback prints', lua.LuaModule.print, lua.LuaModule.printErr);
 console.log('executing lua', luaCmd);
 					//print commands are going to the old output ...
-					lua.execute(luaCmd);
+					lua.doString(luaCmd);
 					//TODO if lua has a syntax error, I just get "attempt to call a string value"
 					// and I think this is going on inside of lua.vm.js ... time to replace it yet?
 				},
@@ -514,11 +554,11 @@ console.log("Lua error!", e);
 			}
 
 			//while we're here, let's store the LaTex generated from the equations ...
-			lua.capture({
+			capture({
 				callback : () => {
 					let luaCmd = "print((require 'symmath.export.LaTeX'(eqn)))"
 console.log('executing lua '+luaCmd);
-					lua.execute(luaCmd);
+					lua.doString(luaCmd);
 				},
 				output : TeX => {
 console.log('got TeX output '+TeX);
