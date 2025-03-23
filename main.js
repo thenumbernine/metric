@@ -1,8 +1,7 @@
 import {Canvas, Option} from '/js/dom.js';
 import {vec2, vec3, quat} from '/js/gl-matrix-3.4.1/index.js';
-import {getIDs, removeFromParent, show, hide, arrayClone} from '/js/util.js';
+import {getIDs, removeFromParent, show, hide, arrayClone, addPackage} from '/js/util.js';
 import {newLua} from '/js/lua-interop.js';
-import {addPackage} from '/js/lua.vm-util.js';
 import {luaPackages} from '/js/lua-packages.js';
 import {GLUtil, quatZAxis} from '/js/gl-util.js';
 import {Mouse3D} from '/js/mouse3d.js';
