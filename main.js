@@ -421,7 +421,7 @@ args:
 	output = where to redirect output,
 	error = where to redirect errors
 */
-const capture = args => {
+const luaCapture = args => {
 	//now cycle through coordinates, evaluate data points, and get the data back into JS
 	//push module output and redirect to a buffer of my own
 	const oldPrint = capturePrint;
@@ -446,7 +446,7 @@ await Promise.all([
 ].map(pkg => addPackage(FS, pkg)));
 
 lua.doString(` package.path = './?.lua;/?.lua;/?/?.lua' `);
-FS.chdir('/symmath');
+FS.chdir('/');
 
 //init lua
 console.log('loaded lua');
@@ -497,7 +497,7 @@ const updateEquations = () => {
 			let failed = false;
 			//here I'm using output for errors
 			//since directing error doesn't work -- all errors result in stdout printing "ERROR attempt to call string"
-			capture({
+			luaCapture({
 				callback : () => {
 					lua.doString("eqn = simplify("+eqn+")");
 					lua.doString("if type(eqn) == 'number' then eqn = Constant(eqn) end");
@@ -513,7 +513,7 @@ console.log('Lua error!', s);
 			//here I'm using output for capturing the compiled lua code
 			// I'm recording errors if the captured code fails to compile in JavaScript
 			let resultFunction = undefined;
-			capture({
+			luaCapture({
 				callback : () => {
 					//execute it as a single line, so output() could capture it all at once (because output() seems to be called line-by-line)
 					let luaCmd = `
@@ -554,7 +554,7 @@ console.log("Lua error!", e);
 			}
 
 			//while we're here, let's store the LaTex generated from the equations ...
-			capture({
+			luaCapture({
 				callback : () => {
 					let luaCmd = "print((require 'symmath.export.LaTeX'(eqn)))"
 console.log('executing lua '+luaCmd);
