@@ -444,13 +444,13 @@ await Promise.all([
 	luaPackages.bignumber,
 ].map(pkg => addPackage(FS, pkg)));
 
-lua.doString(` package.path = './?.lua;/?.lua;/?/?.lua' `);
+lua.run(` package.path = './?.lua;/?.lua;/?/?.lua' `);
 FS.chdir('/');
 
 //init lua
 console.log('loaded lua');
 let luaDoneLoading = false;
-lua.doString(`
+lua.run(`
 local symmath = require 'symmath'
 symmath.setup()
 local LaTeX = symmath.export.LaTeX
@@ -474,7 +474,7 @@ const updateEquations = () => {
 		//declare parameter variables
 		const parameters = ids.parameters.value.split(',').map(s => { return s.trim(); });
 		parameters.forEach(param => {
-			lua.doString(param+" = Variable('"+param+"')");
+			lua.run(param+" = Variable('"+param+"')");
 		});
 
 		ids.constants.value
@@ -487,7 +487,7 @@ const updateEquations = () => {
 			.map(side => { return side.trim(); });
 			const param = eqs[0];
 			const value = eqs[1];
-			lua.doString(param+" = Constant("+value+")");
+			lua.run(param+" = Constant("+value+")");
 		});
 
 		let propertiesHTML = '';
@@ -498,11 +498,11 @@ const updateEquations = () => {
 			//since directing error doesn't work -- all errors result in stdout printing "ERROR attempt to call string"
 			luaCapture({
 				callback : () => {
-					lua.doString("eqn = simplify("+eqn+")");
-					lua.doString("if type(eqn) == 'number' then eqn = Constant(eqn) end");
+					lua.run("eqn = simplify("+eqn+")");
+					lua.run("if type(eqn) == 'number' then eqn = Constant(eqn) end");
 				},
 				output : s => {
-					//don't throw -- lua.doString will catch it.
+					//don't throw -- lua.run will catch it.
 console.log('Lua error!', s);
 					failed = true;
 				},
@@ -526,7 +526,7 @@ print((
 `;
 console.log('executing lua', luaCmd);
 					//print commands are going to the old output ...
-					lua.doString(luaCmd);
+					lua.run(luaCmd);
 					//TODO if lua has a syntax error, I just get "attempt to call a string value"
 					// and I think this is going on inside of lua.vm.js ... time to replace it yet?
 				},
@@ -557,7 +557,7 @@ console.log("Lua error!", e);
 				callback : () => {
 					let luaCmd = "print((require 'symmath.export.LaTeX'(eqn)))"
 console.log('executing lua '+luaCmd);
-					lua.doString(luaCmd);
+					lua.run(luaCmd);
 				},
 				output : TeX => {
 console.log('got TeX output '+TeX);
