@@ -1,6 +1,6 @@
 import {Canvas, Option} from '/js/dom.js';
 import {vec2, vec3, quat} from '/js/gl-matrix-3.4.1/index.js';
-import {getIDs, removeFromParent, show, hide, arrayClone, addPackage} from '/js/util.js';
+import {getIDs, removeFromParent, show, hide, arrayClone, loadPackageAndDeps} from '/js/util.js';
 import {newLua} from '/js/lua-interop.js';
 import {luaPackages} from '/js/lua-packages.js';
 import {GLUtil, quatZAxis} from '/js/gl-util.js';
@@ -437,12 +437,7 @@ lua.newState();
 window.lua = lua;
 
 const FS = lua.lib.FS;
-await Promise.all([
-	luaPackages.ext,
-	luaPackages.symmath,
-	luaPackages.complex,
-	luaPackages.bignumber,
-].map(pkg => addPackage(FS, pkg)));
+await loadPackageAndDeps(FS, ['symmath']);
 
 lua.run(` package.path = './?.lua;/?.lua;/?/?.lua' `);
 FS.chdir('/');
